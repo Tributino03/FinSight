@@ -2,11 +2,14 @@ package dev.Tributino.FinSight.domain;
 
 import dev.Tributino.FinSight.enums.CategoryType;
 import jakarta.persistence.*;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "categories")
+@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 public class Category {
 
     @Id
@@ -24,6 +27,51 @@ public class Category {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreationTimestamp
     private LocalDateTime createdAt;
+
+    @Column(nullable = false)
+    private boolean active = true;
+
+    public void updateName(String newName) {
+        if (newName == null || newName.trim().isEmpty()) {
+            throw new IllegalArgumentException("O nome da categoria não pode ser vazio.");
+        }
+        this.name = newName;
+    }
+
+    public void archive() {
+        this.active = false;
+    }
+
+    public Category(String name, CategoryType categoryType, User user) {
+        this.name = name;
+        this.categoryType = categoryType;
+        this.user = user;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public CategoryType getCategoryType() {
+        return categoryType;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
 }
