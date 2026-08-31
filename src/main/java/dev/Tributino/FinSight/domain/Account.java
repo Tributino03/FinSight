@@ -2,13 +2,15 @@ package dev.Tributino.FinSight.domain;
 
 import dev.Tributino.FinSight.enums.AccountType;
 import jakarta.persistence.*;
-
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "accounts")
+@NoArgsConstructor
 public class Account {
 
     @Id
@@ -29,6 +31,47 @@ public class Account {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreationTimestamp
     private LocalDateTime createdAt;
+
+    public Account(
+            String name,
+            AccountType accountType,
+            BigDecimal balance,
+            User user
+    ) {
+        this.name = name;
+        this.accountType = accountType;
+        this.balance = balance;
+        this.user = user;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public AccountType getAccountType() {
+        return accountType;
+    }
+
+    public BigDecimal getBalance() {
+        return balance;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
 }
