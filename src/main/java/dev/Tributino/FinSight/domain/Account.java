@@ -3,6 +3,7 @@ package dev.Tributino.FinSight.domain;
 import dev.Tributino.FinSight.enums.AccountType;
 import jakarta.persistence.*;
 
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
