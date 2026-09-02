@@ -6,7 +6,6 @@ import dev.Tributino.FinSight.repository.AccountRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -29,44 +28,37 @@ public class AccountService {
                 .orElseThrow(() -> new EntityNotFoundException("Account not found"));
     }
 
-    public List<Account> findByUser(Long idUser) {
-        User user = userService.findById(idUser);
-
-        return accountRepository.findByUser(user);
+    public List<Account> findByUser(Long userId) {
+        return accountRepository.findByUserId(userId);
     }
 
-    public Account create(Account account, Long idUser) {
-        User user = userService.findById(idUser);
-
-        validateBalance(account.getBalance());
+    public Account create(Account accountData, Long userId) {
+        User user = userService.findById(userId);
 
         Account newAccount = new Account(
-                account.getName(),
-                account.getAccountType(),
-                account.getBalance(),
+                accountData.getName(),
+                accountData.getAccountType(),
+                accountData.getBalance(),
                 user
         );
 
         return accountRepository.save(newAccount);
     }
 
-    public Account update(Long id, Account accountData) {
-        Account existingAccount = accountRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Account not found"));
-        existingAccount.setName(accountData.getName());
+    public Account updateName(Long id, String newName) {
+        Account existingAccount = findById(id);
+
+        existingAccount.setName(newName);
 
         return accountRepository.save(existingAccount);
     }
 
-    public void delete(Long id){
-        Account account = findById(id);
-
-        accountRepository.delete(account);
+    public Account save(Account account) {
+        return accountRepository.save(account);
     }
 
-    private void validateBalance(BigDecimal balance) {
-        if (balance == null || balance.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("The account balance cannot be less than zero.");
-        }
+    public void delete(Long id) {
+        Account account = findById(id);
+        accountRepository.delete(account);
     }
 }

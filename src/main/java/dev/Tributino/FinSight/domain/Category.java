@@ -34,6 +34,14 @@ public class Category {
     @Column(nullable = false)
     private boolean active = true;
 
+    public void ensureActive() {
+        if (!this.active) {
+            throw new IllegalStateException(
+                    "Cannot use an inactive category."
+            );
+        }
+    }
+
     public void updateName(String newName) {
         if (newName == null || newName.trim().isEmpty()) {
             throw new IllegalArgumentException("O nome da categoria não pode ser vazio.");

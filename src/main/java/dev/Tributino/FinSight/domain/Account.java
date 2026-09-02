@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "accounts")
-@NoArgsConstructor
+@NoArgsConstructor // Exigido pelo JPA/Hibernate
 public class Account {
 
     @Id
@@ -41,37 +41,49 @@ public class Account {
             BigDecimal balance,
             User user
     ) {
+        validateBalance(balance);
         this.name = name;
         this.accountType = accountType;
         this.balance = balance;
         this.user = user;
     }
 
-    public Long getId() {
-        return id;
+    public void credit(BigDecimal amount) {
+        validateAmount(amount);
+        this.balance = this.balance.add(amount);
     }
 
-    public String getName() {
-        return name;
+    public void debit(BigDecimal amount) {
+        validateAmount(amount);
+        if (this.balance.compareTo(amount) < 0) {
+            throw new IllegalArgumentException("Insufficient balance.");
+        }
+        this.balance = this.balance.subtract(amount);
     }
 
-    public void setName(String name) {
-        this.name = name;
+    private void validateBalance(BigDecimal balance) {
+        if (balance == null || balance.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("The account balance cannot be less than zero.");
+        }
     }
 
-    public AccountType getAccountType() {
-        return accountType;
+    private void validateAmount(BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("The amount must be greater than zero.");
+        }
     }
 
-    public BigDecimal getBalance() {
-        return balance;
-    }
+    public Long getId() { return id; }
 
-    public User getUser() {
-        return user;
-    }
+    public String getName() { return name; }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+    public void setName(String name) { this.name = name; }
+
+    public AccountType getAccountType() { return accountType; }
+
+    public BigDecimal getBalance() { return balance; }
+
+    public User getUser() { return user; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
 }
