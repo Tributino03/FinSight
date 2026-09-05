@@ -13,10 +13,8 @@ import java.util.List;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
-    @Query("SELECT t FROM Transaction t WHERE t.account.id = :accountId")
     List<Transaction> findByAccountId(Long accountId);
 
-    @Query("SELECT t FROM Transaction t WHERE t.category.id = :categoryId")
     List<Transaction> findByCategoryId(Long categoryId);
 
     List<Transaction> findByTransactionDateBetween(LocalDateTime startDate, LocalDateTime endDate);

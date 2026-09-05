@@ -2,6 +2,9 @@ package dev.Tributino.FinSight.service;
 
 import dev.Tributino.FinSight.domain.Account;
 import dev.Tributino.FinSight.domain.User;
+import dev.Tributino.FinSight.dto.account.AccountRequest;
+import dev.Tributino.FinSight.dto.account.AccountResponse;
+import dev.Tributino.FinSight.mapper.AccountMapper;
 import dev.Tributino.FinSight.repository.AccountRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
@@ -13,52 +16,64 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
     private final UserService userService;
+    private final AccountMapper accountMapper;
 
-    public AccountService(AccountRepository accountRepository, UserService userService) {
+    public AccountService(AccountRepository accountRepository, UserService userService, AccountMapper accountMapper) {
         this.accountRepository = accountRepository;
         this.userService = userService;
+        this.accountMapper = accountMapper;
     }
 
-    public List<Account> findAll() {
-        return accountRepository.findAll();
+    public List<AccountResponse> findAll() {
+        return accountRepository.findAll()
+                .stream()
+                .map(accountMapper::toResponse)
+                .toList();
     }
 
-    public Account findById(Long id) {
+    public AccountResponse findById(Long id){
+        Account account = findEntityById(id);
+
+        return accountMapper.toResponse(account);
+    }
+
+    Account findEntityById(Long id) {
         return accountRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Account not found"));
     }
 
-    public List<Account> findByUser(Long userId) {
-        return accountRepository.findByUserId(userId);
+    public List<AccountResponse> findByUserId(Long userId) {
+        return accountRepository.findByUserId(userId)
+                .stream()
+                .map(accountMapper::toResponse)
+                .toList();
     }
 
-    public Account create(Account accountData, Long userId) {
+    public AccountResponse create(AccountRequest accountRequest, Long userId) {
         User user = userService.findById(userId);
 
         Account newAccount = new Account(
-                accountData.getName(),
-                accountData.getAccountType(),
-                accountData.getBalance(),
+                accountRequest.name(),
+                accountRequest.accountType(),
+                accountRequest.balance(),
                 user
         );
 
-        return accountRepository.save(newAccount);
+        Account savedAccount = accountRepository.save(newAccount);
+
+        return accountMapper.toResponse(savedAccount);
     }
 
-    public Account updateName(Long id, String newName) {
-        Account existingAccount = findById(id);
-
+    public AccountResponse updateName(Long id, String newName) {
+        Account existingAccount = findEntityById(id);
         existingAccount.setName(newName);
 
-        return accountRepository.save(existingAccount);
-    }
-
-    public Account save(Account account) {
-        return accountRepository.save(account);
+        Account updatedAccount = accountRepository.save(existingAccount);
+        return accountMapper.toResponse(updatedAccount);
     }
 
     public void delete(Long id) {
-        Account account = findById(id);
+        Account account = findEntityById(id);
         accountRepository.delete(account);
     }
 }

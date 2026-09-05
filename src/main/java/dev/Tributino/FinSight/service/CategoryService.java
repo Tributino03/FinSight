@@ -2,7 +2,10 @@ package dev.Tributino.FinSight.service;
 
 import dev.Tributino.FinSight.domain.Category;
 import dev.Tributino.FinSight.domain.User;
+import dev.Tributino.FinSight.dto.category.CategoryRequest; // Mudado de Response para Request
+import dev.Tributino.FinSight.dto.category.CategoryResponse;
 import dev.Tributino.FinSight.enums.CategoryType;
+import dev.Tributino.FinSight.mapper.CategoryMapper;
 import dev.Tributino.FinSight.repository.CategoryRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
@@ -14,55 +17,74 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final UserService userService;
+    private final CategoryMapper categoryMapper;
 
-    public CategoryService(CategoryRepository categoryRepository, UserService userService) {
+    public CategoryService(CategoryRepository categoryRepository, UserService userService, CategoryMapper categoryMapper) {
         this.categoryRepository = categoryRepository;
         this.userService = userService;
+        this.categoryMapper = categoryMapper;
     }
 
-    public List<Category> findAll() {
-        return categoryRepository.findAll();
+    public List<CategoryResponse> findAll() {
+        return categoryRepository
+                .findAll()
+                .stream()
+                .map(categoryMapper::toResponse)
+                .toList();
     }
 
-    public Category findById(Long id) {
-        Category category = categoryRepository.findById(id)
+    public CategoryResponse findById(Long id) {
+        Category category = findEntityById(id);
+        return categoryMapper.toResponse(category);
+    }
+
+    Category findEntityById(Long id) {
+        return categoryRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Category not found"));
-        return category;
     }
 
-    public List<Category> findIncomesByUser(Long userId) {
+    public List<CategoryResponse> findIncomesByUser(Long userId) {
         User user = userService.findById(userId);
-        return categoryRepository.findAvailableCategoriesByTypeAndUser(CategoryType.INCOME, user);
+        return categoryRepository.findAvailableCategoriesByTypeAndUser(CategoryType.INCOME, user)
+                .stream()
+                .map(categoryMapper::toResponse)
+                .toList();
     }
 
-    public List<Category> findExpensesByUser(Long userId) {
+    public List<CategoryResponse> findExpensesByUser(Long userId) {
         User user = userService.findById(userId);
-        return categoryRepository.findAvailableCategoriesByTypeAndUser(CategoryType.EXPENSE, user);
+        return categoryRepository.findAvailableCategoriesByTypeAndUser(CategoryType.EXPENSE, user)
+                .stream()
+                .map(categoryMapper::toResponse)
+                .toList();
     }
 
-    public Category createCustomCategory(Category categoryInput, Long userId) {
+    public CategoryResponse createCustomCategory(CategoryRequest categoryRequest, Long userId) {
         User user = userService.findById(userId);
 
         Category newCategory = new Category(
-                categoryInput.getName(),
-                categoryInput.getCategoryType(),
+                categoryRequest.name(),
+                categoryRequest.categoryType(),
                 user
         );
 
-        return categoryRepository.save(newCategory);
+        Category savedCategory = categoryRepository.save(newCategory);
+        return categoryMapper.toResponse(savedCategory);
     }
 
-    public Category updateCategory(Long categoryId, String newName) {
-        Category category = findById(categoryId);
+    public CategoryResponse updateCategory(Long categoryId, String newName) {
+        Category category = findEntityById(categoryId);
 
         validateCustomCategory(category);
 
         category.updateName(newName);
-        return categoryRepository.save(category);
+        Category updatedCategory = categoryRepository.save(category);
+
+        return categoryMapper.toResponse(updatedCategory);
     }
 
     public void deleteCategory(Long categoryId) {
-        Category category = findById(categoryId);
+        Category category = findEntityById(categoryId);
 
         validateCustomCategory(category);
 
