@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "accounts")
-@NoArgsConstructor // Exigido pelo JPA/Hibernate
+@NoArgsConstructor
 public class Account {
 
     @Id

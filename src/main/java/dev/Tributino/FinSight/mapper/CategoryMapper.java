@@ -1,6 +1,7 @@
 package dev.Tributino.FinSight.mapper;
 
 import dev.Tributino.FinSight.domain.Category;
+import dev.Tributino.FinSight.domain.User;
 import dev.Tributino.FinSight.dto.category.CategoryResponse;
 import org.springframework.stereotype.Component;
 

@@ -1,55 +1,99 @@
 package dev.Tributino.FinSight.service;
 
 import dev.Tributino.FinSight.domain.User;
+import dev.Tributino.FinSight.dto.user.RegisterRequest;
+import dev.Tributino.FinSight.dto.user.UpdateUserRequest;
+import dev.Tributino.FinSight.dto.user.UserResponse;
+import dev.Tributino.FinSight.mapper.UserMapper;
 import dev.Tributino.FinSight.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Optional;
 
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            UserMapper userMapper
+    ) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.userMapper = userMapper;
     }
 
-    public List<User> findAll() {
-        return userRepository.findAll();
+    public UserResponse findById(Long id) {
+        return userMapper.toResponse(
+                this.findEntityById(id)
+        );
     }
 
-    public User findById(Long id) {
+    User findEntityById(Long id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("User not found")
+                );
     }
 
-    public User create(User user) {
-        validateEmailAvailability(user.getEmail());
+    public UserResponse create(RegisterRequest request) {
 
-        return this.userRepository.save(user);
+        validateEmailAvailability(request.email());
+
+        User newUser = new User(
+                request.name(),
+                request.email(),
+                passwordEncoder.encode(request.password())
+        );
+
+        User savedUser = userRepository.save(newUser);
+
+        return userMapper.toResponse(savedUser);
     }
 
-    public User update (Long id, User user) {
+    public UserResponse update(
+            Long id,
+            UpdateUserRequest request
+    ) {
 
-        User updatedUser = this.findById(id);
+        User updatedUser = this.findEntityById(id);
 
-        updatedUser.setName(user.getName());
-        updatedUser.setPassword(user.getPassword());
+        if (request.name() != null && !request.name().isBlank()) {
+            updatedUser.setName(request.name());
+        }
 
-        return this.userRepository.save(updatedUser);
+        if (request.password() != null
+                && !request.password().isBlank()) {
+
+            updatedUser.setPassword(
+                    passwordEncoder.encode(request.password())
+            );
+        }
+
+        User savedUser = userRepository.save(updatedUser);
+
+        return userMapper.toResponse(savedUser);
     }
 
-    public void delete (Long id) {
-        User user = findById(id);
+    @Transactional
+    public void delete(Long id) {
+
+        User user = this.findEntityById(id);
+
         userRepository.delete(user);
     }
 
     private void validateEmailAvailability(String email) {
+
         if (userRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("This email is already registered in the system.");
+            throw new IllegalArgumentException(
+                    "This email is already registered in the system."
+            );
         }
     }
 }

@@ -1,11 +1,13 @@
 package dev.Tributino.FinSight.controller;
 
+import dev.Tributino.FinSight.domain.User;
 import dev.Tributino.FinSight.dto.category.CategoryRequest;
 import dev.Tributino.FinSight.dto.category.CategoryResponse;
 import dev.Tributino.FinSight.service.CategoryService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,50 +22,48 @@ public class CategoryController {
         this.categoryService = categoryService;
     }
 
-    @GetMapping
-    public ResponseEntity<List<CategoryResponse>> findAll() {
-        return ResponseEntity.ok(categoryService.findAll());
-    }
-
     @GetMapping("/{id}")
-    public ResponseEntity<CategoryResponse> findById(@PathVariable Long id) {
-        return ResponseEntity.ok(categoryService.findById(id));
+    public ResponseEntity<CategoryResponse> findById(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User loggedUser) {
+        return ResponseEntity.ok(categoryService.findById(id, loggedUser));
     }
 
-    @GetMapping("/user/{userId}/income")
-    public ResponseEntity<List<CategoryResponse>> findIncomesByUser(
-            @PathVariable Long userId) {
-
-        return ResponseEntity.ok(categoryService.findIncomesByUser(userId));
+    @GetMapping("/income")
+    public ResponseEntity<List<CategoryResponse>> findIncomesByUser(@AuthenticationPrincipal User loggedUser) {
+        return ResponseEntity.ok(categoryService.findIncomesByUser(loggedUser));
     }
 
-    @GetMapping("/user/{userId}/expense")
-    public ResponseEntity<List<CategoryResponse>> findExpensesByUser(
-            @PathVariable Long userId) {
-
-        return ResponseEntity.ok(categoryService.findExpensesByUser(userId));
+    @GetMapping("/expense")
+    public ResponseEntity<List<CategoryResponse>> findExpensesByUser(@AuthenticationPrincipal User loggedUser) {
+        return ResponseEntity.ok(categoryService.findExpensesByUser(loggedUser));
     }
 
-    @PostMapping("/user/{userId}")
-    public ResponseEntity<CategoryResponse> createCustomCategory(@Valid @RequestBody CategoryRequest categoryRequest, @PathVariable Long userId) {
+    @PostMapping
+    public ResponseEntity<CategoryResponse> createCustomCategory(
+            @Valid @RequestBody CategoryRequest categoryRequest,
+            @AuthenticationPrincipal User loggedUser) {
 
-        CategoryResponse createdCategory = categoryService.createCustomCategory(categoryRequest, userId);
+        CategoryResponse createdCategory = categoryService.createCustomCategory(categoryRequest, loggedUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdCategory);
-
     }
 
-    @PutMapping("{categoryId}/name")
-    public ResponseEntity<CategoryResponse> updateCategory(@PathVariable Long categoryId, @RequestParam String newName) {
+    @PutMapping("/{categoryId}/name")
+    public ResponseEntity<CategoryResponse> updateCategory(
+            @PathVariable Long categoryId,
+            @RequestParam String newName,
+            @AuthenticationPrincipal User loggedUser) {
 
-        CategoryResponse updateCategory = categoryService.updateCategory(categoryId, newName);
+        CategoryResponse updateCategory = categoryService.updateCategory(categoryId, newName, loggedUser);
         return ResponseEntity.ok(updateCategory);
-
     }
 
     @DeleteMapping("/{categoryId}")
-    public ResponseEntity<Void> deleteCategory(@PathVariable Long categoryId) {
-        categoryService.deleteCategory(categoryId);
+    public ResponseEntity<Void> deleteCategory(
+            @PathVariable Long categoryId,
+            @AuthenticationPrincipal User loggedUser) {
+
+        categoryService.deleteCategory(categoryId, loggedUser);
         return ResponseEntity.noContent().build();
     }
-
 }
