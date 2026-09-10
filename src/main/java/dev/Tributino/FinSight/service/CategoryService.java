@@ -2,12 +2,13 @@ package dev.Tributino.FinSight.service;
 
 import dev.Tributino.FinSight.domain.Category;
 import dev.Tributino.FinSight.domain.User;
-import dev.Tributino.FinSight.dto.category.CategoryRequest; // Mudado de Response para Request
+import dev.Tributino.FinSight.dto.category.CategoryRequest;
 import dev.Tributino.FinSight.dto.category.CategoryResponse;
 import dev.Tributino.FinSight.enums.CategoryType;
 import dev.Tributino.FinSight.mapper.CategoryMapper;
 import dev.Tributino.FinSight.repository.CategoryRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,80 +17,63 @@ import java.util.List;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
-    private final UserService userService;
     private final CategoryMapper categoryMapper;
 
-    public CategoryService(CategoryRepository categoryRepository, UserService userService, CategoryMapper categoryMapper) {
+    public CategoryService(CategoryRepository categoryRepository, CategoryMapper categoryMapper) {
         this.categoryRepository = categoryRepository;
-        this.userService = userService;
         this.categoryMapper = categoryMapper;
     }
 
-    public List<CategoryResponse> findAll() {
-        return categoryRepository
-                .findAll()
-                .stream()
-                .map(categoryMapper::toResponse)
-                .toList();
-    }
-
-    public CategoryResponse findById(Long id) {
-        Category category = findEntityById(id);
+    public CategoryResponse findById(Long id, User loggedUser) {
+        Category category = findEntityByIdAndUser(id, loggedUser);
         return categoryMapper.toResponse(category);
     }
 
-    Category findEntityById(Long id) {
-        return categoryRepository.findById(id)
+    Category findEntityByIdAndUser(Long id, User loggedUser) {
+        Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+
+        if (category.getUser() != null && !category.getUser().getId().equals(loggedUser.getId())) {
+            throw new AccessDeniedException("Access denied: This category belongs to another user.");
+        }
+        return category;
     }
 
-    public List<CategoryResponse> findIncomesByUser(Long userId) {
-        User user = userService.findById(userId);
-        return categoryRepository.findAvailableCategoriesByTypeAndUser(CategoryType.INCOME, user)
-                .stream()
-                .map(categoryMapper::toResponse)
-                .toList();
+    public List<CategoryResponse> findIncomesByUser(User loggedUser) {
+        return categoryRepository.findAvailableCategoriesByTypeAndUser(CategoryType.INCOME, loggedUser)
+                .stream().map(categoryMapper::toResponse).toList();
     }
 
-    public List<CategoryResponse> findExpensesByUser(Long userId) {
-        User user = userService.findById(userId);
-        return categoryRepository.findAvailableCategoriesByTypeAndUser(CategoryType.EXPENSE, user)
-                .stream()
-                .map(categoryMapper::toResponse)
-                .toList();
+    public List<CategoryResponse> findExpensesByUser(User loggedUser) {
+        return categoryRepository.findAvailableCategoriesByTypeAndUser(CategoryType.EXPENSE, loggedUser)
+                .stream().map(categoryMapper::toResponse).toList();
     }
 
-    public CategoryResponse createCustomCategory(CategoryRequest categoryRequest, Long userId) {
-        User user = userService.findById(userId);
-
+    public CategoryResponse createCustomCategory(CategoryRequest categoryRequest, User loggedUser) {
         Category newCategory = new Category(
                 categoryRequest.name(),
                 categoryRequest.categoryType(),
-                user
+                loggedUser
         );
 
         Category savedCategory = categoryRepository.save(newCategory);
         return categoryMapper.toResponse(savedCategory);
     }
 
-    public CategoryResponse updateCategory(Long categoryId, String newName) {
-        Category category = findEntityById(categoryId);
-
+    public CategoryResponse updateCategory(Long categoryId, String newName, User loggedUser) {
+        Category category = findEntityByIdAndUser(categoryId, loggedUser);
         validateCustomCategory(category);
 
         category.updateName(newName);
         Category updatedCategory = categoryRepository.save(category);
-
         return categoryMapper.toResponse(updatedCategory);
     }
 
-    public void deleteCategory(Long categoryId) {
-        Category category = findEntityById(categoryId);
-
+    public void deleteCategory(Long categoryId, User loggedUser) {
+        Category category = findEntityByIdAndUser(categoryId, loggedUser);
         validateCustomCategory(category);
 
         category.archive();
-
         categoryRepository.save(category);
     }
 
