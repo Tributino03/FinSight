@@ -1,8 +1,6 @@
 package dev.Tributino.FinSight.domain;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -32,13 +30,45 @@ public class User implements UserDetails {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
-    public User() {
+    protected User() {
     }
 
     public User(String name, String email, String password) {
+        validateName(name);
+        validateEmail(email);
+        validatePassword(password);
+
         this.name = name;
         this.email = email;
         this.password = password;
+    }
+
+    public void updateName(String newName) {
+        validateName(newName);
+        this.name = newName;
+    }
+
+    public void changePassword(String newPassword) {
+        validatePassword(newPassword);
+        this.password = newPassword;
+    }
+
+    private void validateName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("The user name cannot be empty.");
+        }
+    }
+
+    private void validateEmail(String email) {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("The user email is required.");
+        }
+    }
+
+    private void validatePassword(String password) {
+        if (password == null || password.isBlank()) {
+            throw new IllegalArgumentException("The user password is required.");
+        }
     }
 
     public Long getId() {
@@ -47,10 +77,6 @@ public class User implements UserDetails {
 
     public String getName() {
         return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public String getEmail() {
@@ -62,6 +88,7 @@ public class User implements UserDetails {
         return List.of();
     }
 
+    @Override
     public String getPassword() {
         return password;
     }
@@ -73,30 +100,25 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonExpired() {
-        return UserDetails.super.isAccountNonExpired();
+        return true;
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return UserDetails.super.isAccountNonLocked();
+        return true;
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return UserDetails.super.isCredentialsNonExpired();
+        return true;
     }
 
     @Override
     public boolean isEnabled() {
-        return UserDetails.super.isEnabled();
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
+        return true;
     }
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
-
 }

@@ -68,7 +68,7 @@ public class AccountService {
     public AccountResponse updateName(Long id, String newName, User loggedUser) {
         Account existingAccount = findEntityByIdAndUser(id, loggedUser);
 
-        existingAccount.setName(newName);
+        existingAccount.updateName(newName);
         Account updatedAccount = accountRepository.save(existingAccount);
         return accountMapper.toResponse(updatedAccount);
     }

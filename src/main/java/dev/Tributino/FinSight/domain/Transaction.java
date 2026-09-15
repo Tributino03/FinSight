@@ -9,6 +9,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "transactions")
@@ -64,7 +65,16 @@ public class Transaction {
             Category category) {
 
         validateAmount(amount);
+        validateDescription(description);
+        validateTransactionType(transactionType);
+        validatePaymentMethod(paymentMethod);
+        validateTransactionStatus(transactionStatus);
+        validateTransactionDate(transactionDate);
+        validateAccount(account);
+        validateCategory(category);
         validateCategoryCompatibility(transactionType, category);
+        validateOwnership(account, category);
+        category.ensureActive();
 
         this.amount = amount;
         this.description = description;
@@ -82,6 +92,48 @@ public class Transaction {
         }
     }
 
+    private void validateDescription(String description) {
+        if (description == null || description.isBlank()) {
+            throw new IllegalArgumentException("The transaction description cannot be empty.");
+        }
+    }
+
+    private void validateTransactionType(TransactionType transactionType) {
+        if (transactionType == null) {
+            throw new IllegalArgumentException("The transaction type is required.");
+        }
+    }
+
+    private void validatePaymentMethod(PaymentMethod paymentMethod) {
+        if (paymentMethod == null) {
+            throw new IllegalArgumentException("The payment method is required.");
+        }
+    }
+
+    private void validateTransactionStatus(TransactionStatus transactionStatus) {
+        if (transactionStatus == null) {
+            throw new IllegalArgumentException("The transaction status is required.");
+        }
+    }
+
+    private void validateTransactionDate(LocalDateTime transactionDate) {
+        if (transactionDate == null) {
+            throw new IllegalArgumentException("The transaction date is required.");
+        }
+    }
+
+    private void validateAccount(Account account) {
+        if (account == null) {
+            throw new IllegalArgumentException("The transaction account is required.");
+        }
+    }
+
+    private void validateCategory(Category category) {
+        if (category == null) {
+            throw new IllegalArgumentException("The transaction category is required.");
+        }
+    }
+
     private void validateCategoryCompatibility(TransactionType transactionType, Category category) {
         if (transactionType == TransactionType.CREDIT && category.getCategoryType() != CategoryType.INCOME) {
             throw new IllegalArgumentException("Credit transactions require an INCOME category.");
@@ -91,11 +143,32 @@ public class Transaction {
         }
     }
 
+    private void validateOwnership(Account account, Category category) {
+        if (category.getUser() != null && !Objects.equals(account.getUser(), category.getUser())) {
+            throw new IllegalArgumentException("The custom category does not belong to the account owner.");
+        }
+    }
+
     public void cancel() {
         if (this.transactionStatus == TransactionStatus.CANCELLED) {
             throw new IllegalStateException("This transaction is already cancelled.");
         }
+
+        if (this.transactionStatus != TransactionStatus.COMPLETED) {
+            throw new IllegalStateException("This transaction cannot be cancelled.");
+        }
+
         this.transactionStatus = TransactionStatus.CANCELLED;
+    }
+
+    public void setDescription(String description) {
+        validateDescription(description);
+        this.description = description;
+    }
+
+    public void setTransactionDate(LocalDateTime transactionDate) {
+        validateTransactionDate(transactionDate);
+        this.transactionDate = transactionDate;
     }
 
     public Long getId() {
@@ -108,10 +181,6 @@ public class Transaction {
 
     public String getDescription() {
         return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 
     public TransactionType getTransactionType() {
@@ -128,10 +197,6 @@ public class Transaction {
 
     public LocalDateTime getTransactionDate() {
         return transactionDate;
-    }
-
-    public void setTransactionDate(LocalDateTime transactionDate) {
-        this.transactionDate = transactionDate;
     }
 
     public Account getAccount() {
