@@ -4,6 +4,7 @@ import dev.Tributino.FinSight.domain.Account;
 import dev.Tributino.FinSight.domain.Category;
 import dev.Tributino.FinSight.domain.Transaction;
 import dev.Tributino.FinSight.domain.User;
+import dev.Tributino.FinSight.dto.category.CategoryResponse;
 import dev.Tributino.FinSight.dto.transaction.TransactionRequest;
 import dev.Tributino.FinSight.dto.transaction.TransactionResponse;
 import dev.Tributino.FinSight.enums.TransactionStatus;
@@ -36,6 +37,13 @@ public class TransactionService {
         this.accountService = accountService;
         this.categoryService = categoryService;
         this.transactionMapper = transactionMapper;
+    }
+
+    public List<TransactionResponse> findAllByUser(User loggedUser) {
+        return transactionRepository.findAllByUser(loggedUser)
+                .stream()
+                .map(transactionMapper::toResponse)
+                .toList();
     }
 
     public TransactionResponse findById(Long id, User loggedUser) {

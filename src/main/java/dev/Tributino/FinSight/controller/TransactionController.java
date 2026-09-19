@@ -1,6 +1,7 @@
 package dev.Tributino.FinSight.controller;
 
 import dev.Tributino.FinSight.domain.User;
+import dev.Tributino.FinSight.dto.category.CategoryResponse;
 import dev.Tributino.FinSight.dto.transaction.TransactionRequest;
 import dev.Tributino.FinSight.dto.transaction.TransactionResponse;
 import dev.Tributino.FinSight.enums.TransactionType;
@@ -22,6 +23,11 @@ public class TransactionController {
 
     public TransactionController(TransactionService transactionService) {
         this.transactionService = transactionService;
+    }
+
+    @GetMapping
+    public ResponseEntity<List<TransactionResponse>> findAllByUser(@AuthenticationPrincipal User loggedUser) {
+        return ResponseEntity.ok(transactionService.findAllByUser(loggedUser));
     }
 
     @GetMapping("/{id}")

@@ -24,6 +24,13 @@ public class CategoryService {
         this.categoryMapper = categoryMapper;
     }
 
+    public List<CategoryResponse> findAllByUser(User loggedUser) {
+        return categoryRepository.findAllAvailableByUser(loggedUser)
+                .stream()
+                .map(categoryMapper::toResponse)
+                .toList();
+    }
+
     public CategoryResponse findById(Long id, User loggedUser) {
         Category category = findEntityByIdAndUser(id, loggedUser);
         return categoryMapper.toResponse(category);
