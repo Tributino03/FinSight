@@ -56,27 +56,18 @@ public class UserService {
         return userMapper.toResponse(savedUser);
     }
 
-    public UserResponse update(
-            Long id,
-            UpdateUserRequest request
-    ) {
-
-        User updatedUser = this.findEntityById(id);
+    public UserResponse update(Long id, UpdateUserRequest request) {
+        User user = this.findEntityById(id);
 
         if (request.name() != null && !request.name().isBlank()) {
-            updatedUser.setName(request.name());
+            user.updateName(request.name());
         }
 
-        if (request.password() != null
-                && !request.password().isBlank()) {
-
-            updatedUser.setPassword(
-                    passwordEncoder.encode(request.password())
-            );
+        if (request.password() != null && !request.password().isBlank()) {
+            user.changePassword(passwordEncoder.encode(request.password()));
         }
 
-        User savedUser = userRepository.save(updatedUser);
-
+        User savedUser = userRepository.save(user);
         return userMapper.toResponse(savedUser);
     }
 

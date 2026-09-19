@@ -34,18 +34,23 @@ public class Category {
     @Column(nullable = false)
     private boolean active = true;
 
+    public Category(String name, CategoryType categoryType, User user) {
+        validateName(name);
+        validateCategoryType(categoryType);
+
+        this.name = name;
+        this.categoryType = categoryType;
+        this.user = user;
+    }
+
     public void ensureActive() {
         if (!this.active) {
-            throw new IllegalStateException(
-                    "Cannot use an inactive category."
-            );
+            throw new IllegalStateException("Cannot use an inactive category.");
         }
     }
 
     public void updateName(String newName) {
-        if (newName == null || newName.trim().isEmpty()) {
-            throw new IllegalArgumentException("O nome da categoria não pode ser vazio.");
-        }
+        validateName(newName);
         this.name = newName;
     }
 
@@ -53,33 +58,27 @@ public class Category {
         this.active = false;
     }
 
-    public Category(String name, CategoryType categoryType, User user) {
-        this.name = name;
-        this.categoryType = categoryType;
-        this.user = user;
+    private void validateName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("The category name cannot be empty.");
+        }
     }
 
-    public Long getId() {
-        return id;
+    private void validateCategoryType(CategoryType categoryType) {
+        if (categoryType == null) {
+            throw new IllegalArgumentException("The category type is required.");
+        }
     }
 
-    public String getName() {
-        return name;
-    }
+    public Long getId() { return id; }
 
-    public CategoryType getCategoryType() {
-        return categoryType;
-    }
+    public String getName() { return name; }
 
-    public User getUser() {
-        return user;
-    }
+    public CategoryType getCategoryType() { return categoryType; }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+    public User getUser() { return user; }
 
-    public boolean isActive() {
-        return active;
-    }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+
+    public boolean isActive() { return active; }
 }

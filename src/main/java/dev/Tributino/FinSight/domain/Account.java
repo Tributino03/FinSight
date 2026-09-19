@@ -41,7 +41,11 @@ public class Account {
             BigDecimal balance,
             User user
     ) {
+        validateName(name);
+        validateAccountType(accountType);
         validateBalance(balance);
+        validateUser(user);
+
         this.name = name;
         this.accountType = accountType;
         this.balance = balance;
@@ -73,11 +77,32 @@ public class Account {
         }
     }
 
+    private void validateName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("The account name cannot be empty.");
+        }
+    }
+
+    private void validateAccountType(AccountType accountType) {
+        if (accountType == null) {
+            throw new IllegalArgumentException("The account type is required.");
+        }
+    }
+
+    private void validateUser(User user) {
+        if (user == null) {
+            throw new IllegalArgumentException("The account user is required.");
+        }
+    }
+
+    public void updateName(String name) {
+        validateName(name);
+        this.name = name;
+    }
+
     public Long getId() { return id; }
 
     public String getName() { return name; }
-
-    public void setName(String name) { this.name = name; }
 
     public AccountType getAccountType() { return accountType; }
 

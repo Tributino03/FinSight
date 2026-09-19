@@ -22,6 +22,11 @@ public class CategoryController {
         this.categoryService = categoryService;
     }
 
+    @GetMapping
+    public ResponseEntity<List<CategoryResponse>> findAllByUser(@AuthenticationPrincipal User loggedUser) {
+        return ResponseEntity.ok(categoryService.findAllByUser(loggedUser));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<CategoryResponse> findById(
             @PathVariable Long id,
