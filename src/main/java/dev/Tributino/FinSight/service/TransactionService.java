@@ -147,6 +147,14 @@ public class TransactionService {
         );
     }
 
+    public TransactionResponse updateDescription(Long transactionId, String newDescription, User loggedUser) {
+        Transaction existingTransaction = findEntityByIdAndUser(transactionId, loggedUser);
+
+        existingTransaction.updateDescription(newDescription);
+        Transaction updatedTransaction = transactionRepository.save(existingTransaction);
+        return transactionMapper.toResponse(updatedTransaction);
+    }
+
     @Transactional
     public TransactionResponse cancelTransaction(Long transactionId, User loggedUser) {
         Transaction transaction = findEntityByIdAndUser(transactionId, loggedUser);

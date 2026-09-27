@@ -183,7 +183,7 @@ class TransactionServiceIT {
 
         assertThat(reloadedAccount.getBalance())
                 .isEqualByComparingTo(new BigDecimal("900.00"));
-        
+
         assertThat(reloadedTransaction.getTransactionStatus())
                 .isEqualTo(TransactionStatus.COMPLETED);
     }

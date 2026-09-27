@@ -50,14 +50,16 @@ public class AccountService {
                 .toList();
     }
 
-    public AccountResponse create(AccountRequest accountRequest, Long userId) {
-        User user = userService.findEntityById(userId);
+    public AccountResponse create(AccountRequest accountRequest, Long userId, User loggedUser) {
+        if (!userId.equals(loggedUser.getId())) {
+            throw new AccessDeniedException("Access denied: You can only create accounts for yourself.");
+        }
 
         Account newAccount = new Account(
                 accountRequest.name(),
                 accountRequest.accountType(),
                 accountRequest.balance(),
-                user
+                loggedUser
         );
 
         Account savedAccount = accountRepository.save(newAccount);

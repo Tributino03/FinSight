@@ -69,6 +69,10 @@ public class Account {
         if (balance == null || balance.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("The account balance cannot be less than zero.");
         }
+
+        if (balance.scale() > 2) {
+            throw new IllegalArgumentException("The balance cannot have more than 2 decimal places.");
+        }
     }
 
     private void validateAmount(BigDecimal amount) {
