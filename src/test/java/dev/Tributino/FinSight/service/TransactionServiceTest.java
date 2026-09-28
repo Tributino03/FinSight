@@ -29,6 +29,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -56,7 +57,6 @@ class TransactionServiceTest {
     private Category ownerCategory;
     private Transaction ownerTransaction;
     private TransactionRequest transactionRequest;
-    private Category debitCategory;
 
     @BeforeEach
     void setUp() {
@@ -65,7 +65,6 @@ class TransactionServiceTest {
         ownerAccount = mock(Account.class);
         ownerCategory = mock(Category.class);
         ownerTransaction = mock(Transaction.class);
-        transactionRequest = mock(TransactionRequest.class);
 
         transactionRequest = new TransactionRequest(
                 new BigDecimal("50.00"),
@@ -188,30 +187,24 @@ class TransactionServiceTest {
         @Test
         @DisplayName("should throw RuntimeException when database fails while saving created debit")
         void shouldThrowRuntimeExceptionWhenDatabaseFailsOnCreateDebit() {
-            Long accountId = 10L;
-            Long categoryId = 2L;
 
-            when(ownerCategory.getCategoryType()).thenReturn(dev.Tributino.FinSight.enums.CategoryType.EXPENSE);
+            when(ownerCategory.getCategoryType()).thenReturn(CategoryType.EXPENSE);
 
-            when(accountService.findEntityByIdAndUser(accountId, owner))
-                    .thenReturn(ownerAccount);
-            when(categoryService.findEntityByIdAndUser(categoryId, owner))
-                    .thenReturn(ownerCategory);
+            when(accountService.findEntityByIdAndUserForUpdate(anyLong(), any(User.class))).thenReturn(ownerAccount);
+            when(categoryService.findEntityByIdAndUser(anyLong(), any(User.class))).thenReturn(ownerCategory);
 
             when(transactionRepository.save(any(Transaction.class)))
                     .thenThrow(new RuntimeException("Database connection timeout"));
 
             assertThatThrownBy(() -> transactionService.createDebit(
                     transactionRequest,
-                    accountId,
-                    categoryId,
+                    10L,
+                    20L,
                     owner
             ))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessage("Database connection timeout");
 
-            verify(accountService).findEntityByIdAndUser(accountId, owner);
-            verify(categoryService).findEntityByIdAndUser(categoryId, owner);
             verify(transactionRepository).save(any(Transaction.class));
             verifyNoInteractions(transactionMapper);
         }
@@ -225,28 +218,23 @@ class TransactionServiceTest {
         @DisplayName("should throw RuntimeException when database fails while saving created credit")
         void shouldThrowRuntimeExceptionWhenDatabaseFailsOnCreateCredit() {
 
-            Long accountId = 10L;
-            Long categoryId = 2L;
-
             when(ownerCategory.getCategoryType()).thenReturn(CategoryType.INCOME);
 
-            when(accountService.findEntityByIdAndUser(accountId, owner)).thenReturn(ownerAccount);
-            when(categoryService.findEntityByIdAndUser(categoryId, owner)).thenReturn(ownerCategory);
+            when(accountService.findEntityByIdAndUserForUpdate(anyLong(), any(User.class))).thenReturn(ownerAccount);
+            when(categoryService.findEntityByIdAndUser(anyLong(), any(User.class))).thenReturn(ownerCategory);
 
             when(transactionRepository.save(any(Transaction.class)))
                     .thenThrow(new RuntimeException("Database connection timeout"));
 
-            assertThatThrownBy(() ->transactionService.createCredit(
+            assertThatThrownBy(() -> transactionService.createCredit(
                     transactionRequest,
-                    accountId,
-                    categoryId,
+                    10L,
+                    20L,
                     owner
             ))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessage("Database connection timeout");
 
-            verify(accountService).findEntityByIdAndUser(accountId, owner);
-            verify(categoryService).findEntityByIdAndUser(categoryId, owner);
             verify(transactionRepository).save(any(Transaction.class));
             verifyNoInteractions(transactionMapper);
         }
@@ -262,8 +250,11 @@ class TransactionServiceTest {
             TransactionResponse response = mock(TransactionResponse.class);
 
             when(transactionRepository.findById(100L)).thenReturn(Optional.of(ownerTransaction));
-            when(ownerTransaction.getTransactionType()).thenReturn(dev.Tributino.FinSight.enums.TransactionType.DEBIT);
-            when(ownerTransaction.getAmount()).thenReturn(java.math.BigDecimal.valueOf(50.0));
+            when(ownerTransaction.getTransactionType()).thenReturn(TransactionType.DEBIT);
+            when(ownerTransaction.getAmount()).thenReturn(new BigDecimal("50.00"));
+
+            when(accountService.findEntityByIdAndUserForUpdate(anyLong(), eq(owner))).thenReturn(ownerAccount);
+
             when(transactionRepository.save(ownerTransaction)).thenReturn(ownerTransaction);
             when(transactionMapper.toResponse(ownerTransaction)).thenReturn(response);
 
@@ -271,7 +262,7 @@ class TransactionServiceTest {
 
             assertThat(result).isEqualTo(response);
             verify(ownerTransaction).cancel();
-            verify(ownerAccount).credit(java.math.BigDecimal.valueOf(50.0));
+            verify(ownerAccount).credit(new BigDecimal("50.00"));
             verify(transactionRepository).save(ownerTransaction);
         }
 
@@ -293,14 +284,15 @@ class TransactionServiceTest {
         void shouldThrowRuntimeExceptionWhenDatabaseFailsOnCancel() {
 
             when(transactionRepository.findById(100L)).thenReturn(Optional.of(ownerTransaction));
+
+            when(accountService.findEntityByIdAndUserForUpdate(anyLong(), eq(owner))).thenReturn(ownerAccount);
+
             when(transactionRepository.save(any(Transaction.class)))
                     .thenThrow(new RuntimeException("Database connection timeout"));
-
 
             assertThatThrownBy(() -> transactionService.cancelTransaction(100L, owner))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessage("Database connection timeout");
-
 
             verify(transactionRepository).save(any(Transaction.class));
             verifyNoInteractions(transactionMapper);

@@ -231,11 +231,14 @@ class CategoryServiceTest {
         void shouldThrowIllegalArgumentExceptionWhenUpdatingDefaultCategory() {
             when(categoryRepository.findById(10L)).thenReturn(Optional.of(defaultCategory));
 
+            doThrow(new IllegalArgumentException("You cannot modify or delete the system's default categories."))
+                    .when(defaultCategory).updateName(anyString());
+
             assertThatThrownBy(() -> categoryService.updateCategory(10L, "New Name", owner))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("You cannot modify or delete the system's default categories.");
 
-            verify(defaultCategory, never()).updateName(anyString());
+            verify(defaultCategory).updateName(anyString());
             verify(categoryRepository, never()).save(any());
         }
     }
@@ -273,11 +276,14 @@ class CategoryServiceTest {
         void shouldThrowIllegalArgumentExceptionWhenDeletingDefaultCategory() {
             when(categoryRepository.findById(10L)).thenReturn(Optional.of(defaultCategory));
 
+            doThrow(new IllegalArgumentException("You cannot modify or delete the system's default categories."))
+                    .when(defaultCategory).archive();
+
             assertThatThrownBy(() -> categoryService.deleteCategory(10L, owner))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("You cannot modify or delete the system's default categories.");
 
-            verify(defaultCategory, never()).archive();
+            verify(defaultCategory).archive();
             verify(categoryRepository, never()).save(any());
         }
     }

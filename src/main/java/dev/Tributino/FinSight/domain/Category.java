@@ -50,11 +50,13 @@ public class Category {
     }
 
     public void updateName(String newName) {
+        validateModifiable();
         validateName(newName);
         this.name = newName;
     }
 
     public void archive() {
+        validateModifiable();
         this.active = false;
     }
 
@@ -67,6 +69,12 @@ public class Category {
     private void validateCategoryType(CategoryType categoryType) {
         if (categoryType == null) {
             throw new IllegalArgumentException("The category type is required.");
+        }
+    }
+
+    private void validateModifiable() {
+        if (this.user == null) {
+            throw new IllegalArgumentException("You cannot modify or delete the system's default categories.");
         }
     }
 

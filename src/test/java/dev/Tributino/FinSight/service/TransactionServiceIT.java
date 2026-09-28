@@ -48,7 +48,7 @@ class TransactionServiceIT {
 
     private User user;
     private Account account;
-    private Category category;
+    private Category categoryExpense;
     private Category categoryIncome;
     private Transaction transaction;
 
@@ -72,7 +72,7 @@ class TransactionServiceIT {
                 user
         ));
 
-        category = categoryRepository.save(new Category(
+        categoryExpense = categoryRepository.save(new Category(
                 "food",
                 CategoryType.EXPENSE,
                 user
@@ -92,8 +92,202 @@ class TransactionServiceIT {
                 TransactionStatus.COMPLETED,
                 LocalDateTime.now(),
                 account,
-                category
+                categoryExpense
         ));
+    }
+
+    @Test
+    @DisplayName("Should create debit and reduce account balance")
+    void shouldCreateDebitAndReduceAccountBalance() {
+        TransactionRequest transactionRequest = new TransactionRequest(
+                new BigDecimal("100.00"),
+                "food",
+                LocalDateTime.now(),
+                PaymentMethod.DEBIT_CARD
+        );
+
+        TransactionResponse transactionResponse =
+                transactionService.createDebit(
+                        transactionRequest,
+                        account.getId(),
+                        categoryExpense.getId(),
+                        user
+        );
+
+        Account updatedAccount =
+                accountRepository.findById(account.getId())
+                        .orElseThrow();
+
+        assertThat(transactionResponse).isNotNull();
+
+        assertThat(updatedAccount.getBalance())
+                .isEqualByComparingTo(new BigDecimal("800.00"));
+
+        assertThat(transactionRepository.count()).isEqualTo(2);
+
+        Transaction persistedTransaction = transactionRepository.findById(transactionResponse.id())
+                .orElseThrow(() -> new AssertionError("The transaction was not found in the database"));
+
+        assertThat(persistedTransaction.getTransactionType())
+                .as("The transaction type should be DEBIT")
+                .isEqualTo(TransactionType.DEBIT);
+
+        assertThat(persistedTransaction.getTransactionStatus())
+                .as("The transaction status should be COMPLETED")
+                .isEqualTo(TransactionStatus.COMPLETED);
+
+        assertThat(persistedTransaction.getAmount())
+                .as("The transaction amount should be exactly 100.00")
+                .isEqualByComparingTo(new BigDecimal("100.00"));
+
+        assertThat(persistedTransaction.getAccount().getId())
+                .as("The transaction should be linked to the correct account")
+                .isEqualTo(account.getId());
+
+        assertThat(persistedTransaction.getCategory().getId())
+                .as("The transaction should be linked to the correct categorycategory")
+                .isEqualTo(categoryExpense.getId());
+
+    }
+
+    @Test
+    @DisplayName("Should throw exception when debit amount exceeds available balance")
+    void shouldThrowExceptionWhenDebitExceedsBalance() {
+        TransactionRequest transactionRequest = new TransactionRequest(
+                new BigDecimal("950.00"),
+                "food",
+                LocalDateTime.now(),
+                PaymentMethod.DEBIT_CARD
+        );
+
+        long transactionsBefore = transactionRepository.count();
+
+        assertThatThrownBy(() -> transactionService.createDebit(
+                transactionRequest,
+                account.getId(),
+                categoryExpense.getId(),
+                user
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Insufficient balance.");
+
+        Account updatedAccount =
+                accountRepository.findById(account.getId())
+                        .orElseThrow();
+
+        assertThat(updatedAccount.getBalance())
+                .as("The account balance should remain unchanged")
+                .isEqualByComparingTo(new BigDecimal("900.00"));
+
+        assertThat(transactionRepository.count())
+                .as("No new transaction should be saved to the database")
+                .isEqualTo(transactionsBefore);
+    }
+
+    @Test
+    @DisplayName("Should reject debit when using an INCOME category")
+    void shouldRejectDebitWithIncomeCategory() {
+        TransactionRequest transactionRequest = new TransactionRequest(
+                new BigDecimal("100.00"),
+                "food",
+                LocalDateTime.now(),
+                PaymentMethod.DEBIT_CARD
+        );
+
+        long transactionsBefore = transactionRepository.count();
+
+        assertThatThrownBy(() -> transactionService.createDebit(
+                transactionRequest,
+                account.getId(),
+                categoryIncome.getId(),
+                user
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Debit transactions require an EXPENSE category.");
+
+        Account updatedAccount =
+                accountRepository.findById(account.getId())
+                        .orElseThrow();
+
+        assertThat(updatedAccount.getBalance())
+                .as("The account balance should remain unchanged")
+                .isEqualByComparingTo("900.00");
+
+        assertThat(transactionRepository.count())
+                .as("No new transaction should be saved to the database")
+                .isEqualTo(transactionsBefore);
+    }
+
+    @Test
+    @DisplayName("Should reject credit when using an EXPENSE category")
+    void shouldRejectCreditWithExpenseCategory() {
+        TransactionRequest transactionRequest = new TransactionRequest(
+                new BigDecimal("9000.75"),
+                "salary",
+                LocalDateTime.now(),
+                PaymentMethod.PIX
+        );
+
+        Long transactionBefore = transactionRepository.count();
+
+        assertThatThrownBy(() -> transactionService.createCredit(
+                transactionRequest,
+                account.getId(),
+                categoryExpense.getId(),
+                user
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Credit transactions require an INCOME category.");
+
+        Account updatedAccount =
+                accountRepository.findById(account.getId())
+                                .orElseThrow();
+
+        assertThat(updatedAccount.getBalance())
+                .as("The account balance should remain unchanged")
+                .isEqualByComparingTo(new BigDecimal("900.00"));
+
+        assertThat(transactionRepository.count())
+                .as("No new transaction should be saved to the database")
+                .isEqualTo(transactionBefore);
+    }
+
+    @Test
+    @DisplayName("Should reject transaction when category is inactive")
+    void shouldRejectTransactionWhenCategoryIsInactive() {
+        TransactionRequest transactionRequest = new TransactionRequest(
+                new BigDecimal("90.75"),
+                "salary",
+                LocalDateTime.now(),
+                PaymentMethod.PIX
+        );
+
+        Long transactionBefore = transactionRepository.count();
+
+        categoryExpense.archive();
+
+        categoryRepository.save(categoryExpense);
+
+        assertThatThrownBy(() ->transactionService.createDebit(
+                transactionRequest,
+                account.getId(),
+                categoryExpense.getId(),
+                user
+        ))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Cannot use an inactive category.");
+
+        Account updatedAccount = accountRepository
+                .findById(account.getId())
+                .orElseThrow();
+
+        assertThat(updatedAccount.getBalance())
+                .as("The account balance should remain unchanged")
+                .isEqualByComparingTo(new BigDecimal("900.00"));
+
+        assertThat(transactionRepository.count())
+                .as("No new transaction should be saved to the database")
+                .isEqualTo(transactionBefore);
     }
 
     @Test
@@ -101,7 +295,7 @@ class TransactionServiceIT {
     void shouldRollbackWhenDatabaseFailsOnCreateDebit() {
 
         Long accountId = account.getId();
-        Long categoryId = category.getId();
+        Long categoryId = categoryExpense.getId();
 
         long totalTransactionsBefore =
                 transactionRepository.count();
@@ -253,6 +447,30 @@ class TransactionServiceIT {
 
         assertThat(transactionRepository.count())
                 .isEqualTo(2);
+
+        Transaction persistedTransaction = transactionRepository.findById(response.id())
+                .orElseThrow(() -> new AssertionError("The transaction was not found in the database"));
+
+        assertThat(persistedTransaction.getTransactionType())
+                .as("The transaction type should be CREDIT")
+                .isEqualTo(TransactionType.CREDIT);
+
+        assertThat(persistedTransaction.getTransactionStatus())
+                .as("The transaction status should be COMPLETED")
+                .isEqualTo(TransactionStatus.COMPLETED);
+
+        assertThat(persistedTransaction.getAmount())
+                .as("The transaction amount should be exactly 500.00")
+                .isEqualByComparingTo(new BigDecimal("500.00"));
+
+        assertThat(persistedTransaction.getAccount().getId())
+                .as("The transaction should be linked to the correct account")
+                .isEqualTo(account.getId());
+
+        assertThat(persistedTransaction.getCategory().getId())
+                .as("The transaction should be linked to the correct income category")
+                .isEqualTo(categoryIncome.getId());
+
     }
 
     @Test

@@ -69,7 +69,6 @@ public class CategoryService {
 
     public CategoryResponse updateCategory(Long categoryId, String newName, User loggedUser) {
         Category category = findEntityByIdAndUser(categoryId, loggedUser);
-        validateCustomCategory(category);
 
         category.updateName(newName);
         Category updatedCategory = categoryRepository.save(category);
@@ -78,15 +77,8 @@ public class CategoryService {
 
     public void deleteCategory(Long categoryId, User loggedUser) {
         Category category = findEntityByIdAndUser(categoryId, loggedUser);
-        validateCustomCategory(category);
 
         category.archive();
         categoryRepository.save(category);
-    }
-
-    private void validateCustomCategory(Category category) {
-        if (category.getUser() == null) {
-            throw new IllegalArgumentException("You cannot modify or delete the system's default categories.");
-        }
     }
 }
