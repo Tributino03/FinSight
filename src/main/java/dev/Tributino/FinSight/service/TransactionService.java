@@ -4,7 +4,6 @@ import dev.Tributino.FinSight.domain.Account;
 import dev.Tributino.FinSight.domain.Category;
 import dev.Tributino.FinSight.domain.Transaction;
 import dev.Tributino.FinSight.domain.User;
-import dev.Tributino.FinSight.dto.category.CategoryResponse;
 import dev.Tributino.FinSight.dto.transaction.TransactionRequest;
 import dev.Tributino.FinSight.dto.transaction.TransactionResponse;
 import dev.Tributino.FinSight.enums.TransactionStatus;
@@ -18,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.function.Consumer;
 
 @Service
 public class TransactionService {
@@ -33,6 +31,7 @@ public class TransactionService {
             AccountService accountService,
             CategoryService categoryService,
             TransactionMapper transactionMapper) {
+
         this.transactionRepository = transactionRepository;
         this.accountService = accountService;
         this.categoryService = categoryService;
@@ -56,7 +55,9 @@ public class TransactionService {
                 .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
 
         if (!transaction.getAccount().getUser().getId().equals(loggedUser.getId())) {
-            throw new AccessDeniedException("Access denied: This transaction belongs to another user.");
+            throw new AccessDeniedException(
+                    "Access denied: This transaction belongs to another user."
+            );
         }
 
         return transaction;
@@ -79,23 +80,34 @@ public class TransactionService {
             User loggedUser) {
 
         if (startDate == null || endDate == null) {
-            throw new IllegalArgumentException("Start date and end date are required.");
+            throw new IllegalArgumentException(
+                    "Start date and end date are required."
+            );
         }
 
         if (startDate.isAfter(endDate)) {
-            throw new IllegalArgumentException("Start date cannot be after end date.");
+            throw new IllegalArgumentException(
+                    "Start date cannot be after end date."
+            );
         }
 
         accountService.findEntityByIdAndUser(accountId, loggedUser);
 
         return transactionRepository
-                .findByAccountIdAndTransactionDateBetween(accountId, startDate, endDate)
+                .findByAccountIdAndTransactionDateBetween(
+                        accountId,
+                        startDate,
+                        endDate
+                )
                 .stream()
                 .map(transactionMapper::toResponse)
                 .toList();
     }
 
-    public List<TransactionResponse> findByCategoryId(Long categoryId, User loggedUser) {
+    public List<TransactionResponse> findByCategoryId(
+            Long categoryId,
+            User loggedUser) {
+
         categoryService.findEntityByIdAndUser(categoryId, loggedUser);
 
         return transactionRepository
@@ -105,9 +117,15 @@ public class TransactionService {
                 .toList();
     }
 
-    public List<TransactionResponse> findByTransactionType(TransactionType transactionType, User loggedUser) {
+    public List<TransactionResponse> findByTransactionType(
+            TransactionType transactionType,
+            User loggedUser) {
+
         return transactionRepository
-                .findByTransactionTypeAndAccount_UserId(transactionType, loggedUser.getId())
+                .findByTransactionTypeAndAccount_UserId(
+                        transactionType,
+                        loggedUser.getId()
+                )
                 .stream()
                 .map(transactionMapper::toResponse)
                 .toList();
@@ -120,14 +138,35 @@ public class TransactionService {
             Long categoryId,
             User loggedUser) {
 
-        return processTransaction(
-                request,
-                accountId,
-                categoryId,
-                loggedUser,
+        Account account =
+                accountService.findEntityByIdAndUserForUpdate(
+                        accountId,
+                        loggedUser
+                );
+
+        Category category =
+                categoryService.findEntityByIdAndUser(
+                        categoryId,
+                        loggedUser
+                );
+
+        Transaction newTransaction = new Transaction(
+                request.amount(),
+                request.description(),
                 TransactionType.DEBIT,
-                account -> account.debit(request.amount())
+                request.paymentMethod(),
+                TransactionStatus.COMPLETED,
+                request.transactionDate(),
+                account,
+                category
         );
+
+        account.debit(request.amount());
+
+        Transaction savedTransaction =
+                transactionRepository.save(newTransaction);
+
+        return transactionMapper.toResponse(savedTransaction);
     }
 
     @Transactional
@@ -137,20 +176,66 @@ public class TransactionService {
             Long categoryId,
             User loggedUser) {
 
-        return processTransaction(
-                request,
-                accountId,
-                categoryId,
-                loggedUser,
+        Account account =
+                accountService.findEntityByIdAndUserForUpdate(
+                        accountId,
+                        loggedUser
+                );
+
+        Category category =
+                categoryService.findEntityByIdAndUser(
+                        categoryId,
+                        loggedUser
+                );
+
+        Transaction newTransaction = new Transaction(
+                request.amount(),
+                request.description(),
                 TransactionType.CREDIT,
-                account -> account.credit(request.amount())
+                request.paymentMethod(),
+                TransactionStatus.COMPLETED,
+                request.transactionDate(),
+                account,
+                category
         );
+
+        account.credit(request.amount());
+
+        Transaction savedTransaction =
+                transactionRepository.save(newTransaction);
+
+        return transactionMapper.toResponse(savedTransaction);
+    }
+
+    public TransactionResponse updateDescription(
+            Long transactionId,
+            String newDescription,
+            User loggedUser) {
+
+        Transaction existingTransaction =
+                findEntityByIdAndUser(transactionId, loggedUser);
+
+        existingTransaction.updateDescription(newDescription);
+
+        Transaction updatedTransaction =
+                transactionRepository.save(existingTransaction);
+
+        return transactionMapper.toResponse(updatedTransaction);
     }
 
     @Transactional
-    public TransactionResponse cancelTransaction(Long transactionId, User loggedUser) {
-        Transaction transaction = findEntityByIdAndUser(transactionId, loggedUser);
-        Account account = transaction.getAccount();
+    public TransactionResponse cancelTransaction(
+            Long transactionId,
+            User loggedUser) {
+
+        Transaction transaction =
+                findEntityByIdAndUser(transactionId, loggedUser);
+
+        Account account =
+                accountService.findEntityByIdAndUserForUpdate(
+                        transaction.getAccount().getId(),
+                        loggedUser
+                );
 
         transaction.cancel();
 
@@ -160,35 +245,9 @@ public class TransactionService {
             account.debit(transaction.getAmount());
         }
 
-        Transaction cancelledTransaction = transactionRepository.save(transaction);
+        Transaction cancelledTransaction =
+                transactionRepository.save(transaction);
+
         return transactionMapper.toResponse(cancelledTransaction);
-    }
-
-    private TransactionResponse processTransaction(
-            TransactionRequest request,
-            Long accountId,
-            Long categoryId,
-            User loggedUser,
-            TransactionType type,
-            Consumer<Account> accountAction) {
-
-        Account account = accountService.findEntityByIdAndUser(accountId, loggedUser);
-        Category category = categoryService.findEntityByIdAndUser(categoryId, loggedUser);
-
-        Transaction newTransaction = new Transaction(
-                request.amount(),
-                request.description(),
-                type,
-                request.paymentMethod(),
-                TransactionStatus.COMPLETED,
-                request.transactionDate(),
-                account,
-                category
-        );
-
-        accountAction.accept(account);
-
-        Transaction savedTransaction = transactionRepository.save(newTransaction);
-        return transactionMapper.toResponse(savedTransaction);
     }
 }

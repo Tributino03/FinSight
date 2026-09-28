@@ -88,7 +88,11 @@ public class Transaction {
 
     private void validateAmount(BigDecimal amount) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("The transaction amount must be greater than zero.");
+            throw new IllegalArgumentException("The amount must be greater than zero.");
+        }
+
+        if (amount.scale() > 2) {
+            throw new IllegalArgumentException("The amount cannot have more than 2 decimal places.");
         }
     }
 
@@ -161,14 +165,9 @@ public class Transaction {
         this.transactionStatus = TransactionStatus.CANCELLED;
     }
 
-    public void setDescription(String description) {
-        validateDescription(description);
-        this.description = description;
-    }
-
-    public void setTransactionDate(LocalDateTime transactionDate) {
-        validateTransactionDate(transactionDate);
-        this.transactionDate = transactionDate;
+    public void updateDescription(String newDescription) {
+        validateDescription(newDescription);
+        this.description = newDescription;
     }
 
     public Long getId() {

@@ -2,7 +2,9 @@ package dev.Tributino.FinSight.service;
 
 import dev.Tributino.FinSight.domain.Account;
 import dev.Tributino.FinSight.domain.User;
+import dev.Tributino.FinSight.dto.account.AccountRequest;
 import dev.Tributino.FinSight.dto.account.AccountResponse;
+import dev.Tributino.FinSight.enums.AccountType;
 import dev.Tributino.FinSight.mapper.AccountMapper;
 import dev.Tributino.FinSight.repository.AccountRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,6 +54,40 @@ class AccountServiceTest {
         lenient().when(owner.getId()).thenReturn(1L);
         lenient().when(attacker.getId()).thenReturn(2L);
         lenient().when(ownerAccount.getUser()).thenReturn(owner);
+    }
+
+    @Nested
+    @DisplayName("create")
+    class Create {
+
+        @Test
+        @DisplayName("should create account successfully when user creates for themselves")
+        void shouldCreateAccountSuccessfullyWhenUserCreatesForThemselves() {
+            AccountRequest request = new AccountRequest("Checking", AccountType.CHECKING, new BigDecimal("100.00"));
+            AccountResponse response = mock(AccountResponse.class);
+
+            when(accountRepository.save(any(Account.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(accountMapper.toResponse(any(Account.class))).thenReturn(response);
+
+            AccountResponse result = accountService.create(request, 1L, owner);
+
+            assertThat(result).isNotNull().isEqualTo(response);
+            verify(accountRepository).save(any(Account.class));
+            verify(accountMapper).toResponse(any(Account.class));
+        }
+
+        @Test
+        @DisplayName("should throw AccessDeniedException when trying to create account for another user")
+        void shouldThrowAccessDeniedExceptionWhenTryingToCreateAccountForAnotherUser() {
+            AccountRequest request = new AccountRequest("Checking", AccountType.CHECKING, new BigDecimal("100.00"));
+
+            assertThatThrownBy(() -> accountService.create(request, 1L, attacker))
+                    .isInstanceOf(AccessDeniedException.class)
+                    .hasMessage("Access denied: You can only create accounts for yourself.");
+
+            verify(accountRepository, never()).save(any());
+            verify(accountMapper, never()).toResponse(any());
+        }
     }
 
     @Nested

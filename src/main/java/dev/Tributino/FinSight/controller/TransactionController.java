@@ -1,6 +1,7 @@
 package dev.Tributino.FinSight.controller;
 
 import dev.Tributino.FinSight.domain.User;
+import dev.Tributino.FinSight.dto.account.AccountResponse;
 import dev.Tributino.FinSight.dto.category.CategoryResponse;
 import dev.Tributino.FinSight.dto.transaction.TransactionRequest;
 import dev.Tributino.FinSight.dto.transaction.TransactionResponse;
@@ -101,6 +102,15 @@ public class TransactionController {
 
         TransactionResponse createdTransaction = transactionService.createCredit(request, accountId, categoryId, loggedUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdTransaction);
+    }
+
+    @PutMapping("/{id}/description")
+    public ResponseEntity<TransactionResponse> updateDescription(
+            @PathVariable Long id,
+            @RequestParam String newDescription,
+            @AuthenticationPrincipal User loggedUser) {
+        TransactionResponse updatedTransaction = transactionService.updateDescription(id, newDescription, loggedUser);
+        return ResponseEntity.ok(updatedTransaction);
     }
 
     @PatchMapping("/{id}/cancel")

@@ -16,7 +16,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TransactionTest {
 
@@ -80,13 +81,13 @@ class TransactionTest {
                     )
             );
 
-            assertEquals("The transaction amount must be greater than zero.", exception.getMessage());
+            assertEquals("The amount must be greater than zero.", exception.getMessage());
         }
 
         @Test
         @DisplayName("Should throw exception when transaction amount is zero or negative")
         void shouldThrowExceptionWhenAmountIsZeroOrNegative() {
-            assertThrows(
+            IllegalArgumentException zeroException = assertThrows(
                     IllegalArgumentException.class,
                     () -> new Transaction(
                             BigDecimal.ZERO,
@@ -99,8 +100,9 @@ class TransactionTest {
                             expenseCategory
                     )
             );
+            assertEquals("The amount must be greater than zero.", zeroException.getMessage());
 
-            assertThrows(
+            IllegalArgumentException negativeException = assertThrows(
                     IllegalArgumentException.class,
                     () -> new Transaction(
                             new BigDecimal("-10.00"),
@@ -113,6 +115,27 @@ class TransactionTest {
                             expenseCategory
                     )
             );
+            assertEquals("The amount must be greater than zero.", negativeException.getMessage());
+        }
+
+        @Test
+        @DisplayName("Should throw exception when amount has more than two decimal places")
+        void shouldThrowExceptionWhenAmountHasMoreThanTwoDecimalPlaces() {
+            IllegalArgumentException exception = assertThrows(
+                    IllegalArgumentException.class,
+                    () -> new Transaction(
+                            new BigDecimal("50.005"),
+                            "Purchase",
+                            TransactionType.DEBIT,
+                            PaymentMethod.DEBIT_CARD,
+                            TransactionStatus.COMPLETED,
+                            LocalDateTime.now(),
+                            defaultAccount,
+                            expenseCategory
+                    )
+            );
+
+            assertEquals("The amount cannot have more than 2 decimal places.", exception.getMessage());
         }
     }
 
@@ -145,13 +168,13 @@ class TransactionTest {
         @ParameterizedTest
         @NullAndEmptySource
         @ValueSource(strings = {"   ", "\t", "\n"})
-        @DisplayName("Should throw exception when mutating description to null or blank")
-        void shouldThrowExceptionWhenMutatingDescriptionToInvalidValue(String invalidDescription) {
+        @DisplayName("Should throw exception when updating description to null or blank")
+        void shouldThrowExceptionWhenUpdatingDescriptionToInvalidValue(String invalidDescription) {
             Transaction transaction = createValidDebitTransaction();
 
             IllegalArgumentException exception = assertThrows(
                     IllegalArgumentException.class,
-                    () -> transaction.setDescription(invalidDescription)
+                    () -> transaction.updateDescription(invalidDescription)
             );
 
             assertEquals("The transaction description cannot be empty.", exception.getMessage());
@@ -162,7 +185,7 @@ class TransactionTest {
         void shouldUpdateDescriptionSuccessfully() {
             Transaction transaction = createValidDebitTransaction();
 
-            transaction.setDescription("Updated Description");
+            transaction.updateDescription("Updated Description");
 
             assertEquals("Updated Description", transaction.getDescription());
         }
@@ -247,19 +270,6 @@ class TransactionTest {
                             defaultAccount,
                             expenseCategory
                     )
-            );
-
-            assertEquals("The transaction date is required.", exception.getMessage());
-        }
-
-        @Test
-        @DisplayName("Should throw exception when setting transaction date to null")
-        void shouldThrowExceptionWhenSettingTransactionDateToNull() {
-            Transaction transaction = createValidDebitTransaction();
-
-            IllegalArgumentException exception = assertThrows(
-                    IllegalArgumentException.class,
-                    () -> transaction.setTransactionDate(null)
             );
 
             assertEquals("The transaction date is required.", exception.getMessage());

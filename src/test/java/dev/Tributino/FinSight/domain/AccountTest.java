@@ -87,6 +87,19 @@ class AccountTest {
         }
 
         @Test
+        @DisplayName("Should throw exception when initial balance has more than 2 decimal places")
+        void shouldThrowExceptionWhenInitialBalanceHasMoreThan2DecimalPlaces() {
+            BigDecimal balanceMore2DecimalPlaces= new BigDecimal("10.999");
+
+            IllegalArgumentException exception = assertThrows(
+                    IllegalArgumentException.class,
+                    () -> createAccountWithBalance(balanceMore2DecimalPlaces)
+            );
+
+            assertEquals("The balance cannot have more than 2 decimal places.", exception.getMessage());
+        }
+
+        @Test
         @DisplayName("Should create account when initial balance is zero")
         void shouldCreateAccountWhenInitialBalanceIsZero() {
             Account account = createAccountWithBalance(BigDecimal.ZERO);

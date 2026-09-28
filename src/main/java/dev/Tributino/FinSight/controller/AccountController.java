@@ -43,7 +43,7 @@ public class AccountController {
             @Valid @RequestBody AccountRequest request,
             @AuthenticationPrincipal User loggedUser) {
 
-        AccountResponse createdAccount = accountService.create(request, loggedUser.getId());
+        AccountResponse createdAccount = accountService.create(request, loggedUser.getId(), loggedUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdAccount);
     }
 
