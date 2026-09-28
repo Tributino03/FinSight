@@ -29,6 +29,20 @@ public class AccountService {
         return accountMapper.toResponse(account);
     }
 
+    public Account findEntityByIdAndUserForUpdate(Long id, User loggedUser) {
+
+        Account account = accountRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new EntityNotFoundException("Account not found"));
+
+        if (!account.getUser().getId().equals(loggedUser.getId())) {
+            throw new AccessDeniedException(
+                    "Access denied: This account belongs to another user."
+            );
+        }
+
+        return account;
+    }
+
     Account findEntityByIdAndUser(Long id, User loggedUser) {
         Account account = accountRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Account not found"));
