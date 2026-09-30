@@ -13,6 +13,7 @@ public record TransactionRequest(
         @Positive(message = "Amount must be greater than zero")
         BigDecimal amount,
 
+        @NotNull(message = "Description is required")
         String description,
 
         @NotNull(message = "Transaction date is required")

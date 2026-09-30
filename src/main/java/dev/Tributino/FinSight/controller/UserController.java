@@ -21,7 +21,7 @@ public class UserController {
         this.userService = userService;
     }
 
-    @PostMapping("/create")
+    @PostMapping
     public ResponseEntity<UserResponse> create(
             @Valid @RequestBody RegisterRequest request
     ) {
@@ -41,7 +41,7 @@ public class UserController {
         );
     }
 
-    @PutMapping("/me")
+    @PatchMapping("/me")
     public ResponseEntity<UserResponse> update(
             @Valid @RequestBody UpdateUserRequest request,
             @AuthenticationPrincipal User loggedUser

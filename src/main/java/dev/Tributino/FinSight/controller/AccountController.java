@@ -3,6 +3,7 @@ package dev.Tributino.FinSight.controller;
 import dev.Tributino.FinSight.domain.User;
 import dev.Tributino.FinSight.dto.account.AccountRequest;
 import dev.Tributino.FinSight.dto.account.AccountResponse;
+import dev.Tributino.FinSight.dto.account.AccountUpdateRequest;
 import dev.Tributino.FinSight.service.AccountService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -31,13 +32,13 @@ public class AccountController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/user/{userId}")
+    @GetMapping
     public ResponseEntity<List<AccountResponse>> findByUserId(
-            @PathVariable Long userId,
             @AuthenticationPrincipal User loggedUser) {
 
-        return ResponseEntity.ok(accountService.findByUserId(userId, loggedUser));
+        return ResponseEntity.ok(accountService.findByUserId(loggedUser.getId(), loggedUser));
     }
+
     @PostMapping
     public ResponseEntity<AccountResponse> create(
             @Valid @RequestBody AccountRequest request,
@@ -47,12 +48,12 @@ public class AccountController {
         return ResponseEntity.status(HttpStatus.CREATED).body(createdAccount);
     }
 
-    @PutMapping("/{id}/name")
+    @PatchMapping("/{id}")
     public ResponseEntity<AccountResponse> updateName(
             @PathVariable Long id,
-            @RequestParam String newName,
+            @Valid @RequestBody AccountUpdateRequest accountUpdateRequest,
             @AuthenticationPrincipal User loggedUser) {
-        AccountResponse updatedAccount = accountService.updateName(id, newName, loggedUser);
+        AccountResponse updatedAccount = accountService.updateName(id, accountUpdateRequest.newName(), loggedUser);
         return ResponseEntity.ok(updatedAccount);
     }
 
