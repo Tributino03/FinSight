@@ -3,6 +3,7 @@ package dev.Tributino.FinSight.controller;
 import dev.Tributino.FinSight.domain.User;
 import dev.Tributino.FinSight.dto.category.CategoryRequest;
 import dev.Tributino.FinSight.dto.category.CategoryResponse;
+import dev.Tributino.FinSight.dto.category.CategoryUpdateRequest;
 import dev.Tributino.FinSight.service.CategoryService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -53,17 +54,17 @@ public class CategoryController {
         return ResponseEntity.status(HttpStatus.CREATED).body(createdCategory);
     }
 
-    @PutMapping("/{categoryId}/name")
+    @PatchMapping("/{id}")
     public ResponseEntity<CategoryResponse> updateCategory(
             @PathVariable Long categoryId,
-            @RequestParam String newName,
+            @Valid @RequestBody CategoryUpdateRequest categoryUpdateRequest,
             @AuthenticationPrincipal User loggedUser) {
 
-        CategoryResponse updateCategory = categoryService.updateCategory(categoryId, newName, loggedUser);
+        CategoryResponse updateCategory = categoryService.updateCategory(categoryId, categoryUpdateRequest.newName(), loggedUser);
         return ResponseEntity.ok(updateCategory);
     }
 
-    @DeleteMapping("/{categoryId}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCategory(
             @PathVariable Long categoryId,
             @AuthenticationPrincipal User loggedUser) {
