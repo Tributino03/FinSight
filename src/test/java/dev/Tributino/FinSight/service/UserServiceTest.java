@@ -113,7 +113,7 @@ class UserServiceTest {
 
             assertThatThrownBy(() -> userService.create(request))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("This email is already registered in the system.");
+                    .hasMessage("This email is already registered.");
 
             verify(passwordEncoder, never()).encode(anyString());
             verify(userRepository, never()).save(any());
