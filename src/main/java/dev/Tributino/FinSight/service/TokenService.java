@@ -32,7 +32,7 @@ public class TokenService {
         } catch (JWTCreationException exception) {
 
             throw new RuntimeException(
-                    "Erro ao gerar token JWT",
+                    "Failed to generate JWT token.",
                     exception
             );
         }

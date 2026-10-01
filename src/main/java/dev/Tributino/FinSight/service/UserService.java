@@ -83,7 +83,7 @@ public class UserService {
 
         if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException(
-                    "This email is already registered in the system."
+                    "This email is already registered."
             );
         }
     }

@@ -24,7 +24,7 @@ class UserTest {
                     IllegalArgumentException.class,
                     () -> new User(invalidName, "gustavo@email.com", "secret123")
             );
-            assertEquals("The user name cannot be empty.", ex.getMessage());
+            assertEquals("User name cannot be empty.", ex.getMessage());
         }
 
         @ParameterizedTest
@@ -36,7 +36,7 @@ class UserTest {
                     IllegalArgumentException.class,
                     () -> new User("Gustavo", invalidEmail, "secret123")
             );
-            assertEquals("The user email is required.", ex.getMessage());
+            assertEquals("User email is required.", ex.getMessage());
         }
 
         @ParameterizedTest
@@ -48,7 +48,7 @@ class UserTest {
                     IllegalArgumentException.class,
                     () -> new User("Gustavo", "gustavo@email.com", invalidPassword)
             );
-            assertEquals("The user password is required.", ex.getMessage());
+            assertEquals("User password is required.", ex.getMessage());
         }
 
         @Test
@@ -88,7 +88,7 @@ class UserTest {
                     IllegalArgumentException.class,
                     () -> user.updateName(invalidName)
             );
-            assertEquals("The user name cannot be empty.", ex.getMessage());
+            assertEquals("User name cannot be empty.", ex.getMessage());
         }
 
         @Test
@@ -112,7 +112,7 @@ class UserTest {
                     IllegalArgumentException.class,
                     () -> user.changePassword(invalidPassword)
             );
-            assertEquals("The user password is required.", ex.getMessage());
+            assertEquals("User password is required.", ex.getMessage());
         }
     }
 }

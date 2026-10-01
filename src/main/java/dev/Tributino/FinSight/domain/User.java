@@ -55,19 +55,19 @@ public class User implements UserDetails {
 
     private void validateName(String name) {
         if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("The user name cannot be empty.");
+            throw new IllegalArgumentException("User name cannot be empty.");
         }
     }
 
     private void validateEmail(String email) {
         if (email == null || email.isBlank()) {
-            throw new IllegalArgumentException("The user email is required.");
+            throw new IllegalArgumentException("User email is required.");
         }
     }
 
     private void validatePassword(String password) {
         if (password == null || password.isBlank()) {
-            throw new IllegalArgumentException("The user password is required.");
+            throw new IllegalArgumentException("User password is required.");
         }
     }
 
