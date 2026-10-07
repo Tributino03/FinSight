@@ -1,8 +1,10 @@
 package dev.Tributino.FinSight.domain;
 
+import dev.Tributino.FinSight.enums.Role;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
@@ -26,6 +28,10 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String password;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Role role;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -41,6 +47,7 @@ public class User implements UserDetails {
         this.name = name;
         this.email = email;
         this.password = password;
+        this.role = Role.USER;
     }
 
     public void updateName(String newName) {
@@ -83,9 +90,16 @@ public class User implements UserDetails {
         return email;
     }
 
+    public Role getRole() {
+        return role;
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
+
+        return List.of(
+                new SimpleGrantedAuthority("ROLE_" + role.name())
+        );
     }
 
     @Override
