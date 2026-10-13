@@ -32,6 +32,9 @@ public class User implements UserDetails {
     @Column(nullable = false, length = 20)
     private Role role;
 
+    @Column(nullable = false)
+    private boolean enabled;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -48,11 +51,19 @@ public class User implements UserDetails {
         this.email = email;
         this.password = password;
         this.role = Role.USER;
+        this.enabled = true;
     }
 
     public void updateName(String newName) {
         validateName(newName);
         this.name = newName;
+    }
+
+    public void changeRole(Role newRole) {
+        if (newRole == null) {
+            throw new IllegalArgumentException("Role cannot be null.");
+        }
+        this.role = newRole;
     }
 
     public void changePassword(String newPassword) {
@@ -78,6 +89,15 @@ public class User implements UserDetails {
         }
     }
 
+    public void enable() {
+        this.enabled = true;
+    }
+
+    public void disable() {
+        this.enabled = false;
+    }
+
+
     public Long getId() {
         return id;
     }
@@ -93,6 +113,7 @@ public class User implements UserDetails {
     public Role getRole() {
         return role;
     }
+
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -129,7 +150,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return enabled;
     }
 
     public LocalDateTime getCreatedAt() {

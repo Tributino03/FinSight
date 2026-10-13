@@ -45,6 +45,7 @@ public class SecurityFilter extends OncePerRequestFilter {
             if (!email.isEmpty()) {
 
                 userRepository.findByEmail(email)
+                        .filter(User::isEnabled)
                         .ifPresent(user -> {
 
                             var authentication =

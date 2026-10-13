@@ -7,9 +7,9 @@ import dev.Tributino.FinSight.dto.user.UserResponse;
 import dev.Tributino.FinSight.mapper.UserMapper;
 import dev.Tributino.FinSight.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserService {
@@ -28,12 +28,14 @@ public class UserService {
         this.userMapper = userMapper;
     }
 
+    @Transactional(readOnly = true)
     public UserResponse findById(Long id) {
         return userMapper.toResponse(
                 this.findEntityById(id)
         );
     }
 
+    @Transactional(readOnly = true)
     User findEntityById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() ->
@@ -41,6 +43,7 @@ public class UserService {
                 );
     }
 
+    @Transactional
     public UserResponse create(RegisterRequest request) {
 
         validateEmailAvailability(request.email());
@@ -56,27 +59,26 @@ public class UserService {
         return userMapper.toResponse(savedUser);
     }
 
-    public UserResponse update(Long id, UpdateUserRequest request) {
-        User user = this.findEntityById(id);
+    @Transactional
+    public UserResponse update(User loggedUser, UpdateUserRequest request) {
 
         if (request.name() != null && !request.name().isBlank()) {
-            user.updateName(request.name());
+            loggedUser.updateName(request.name());
         }
 
         if (request.password() != null && !request.password().isBlank()) {
-            user.changePassword(passwordEncoder.encode(request.password()));
+            loggedUser.changePassword(
+                    passwordEncoder.encode(request.password())
+            );
         }
 
-        User savedUser = userRepository.save(user);
+        User savedUser = userRepository.save(loggedUser);
         return userMapper.toResponse(savedUser);
     }
 
     @Transactional
-    public void delete(Long id) {
-
-        User user = this.findEntityById(id);
-
-        userRepository.delete(user);
+    public void delete(User loggedUser) {
+        userRepository.delete(loggedUser);
     }
 
     private void validateEmailAvailability(String email) {

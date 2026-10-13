@@ -128,82 +128,44 @@ class UserServiceTest {
         @Test
         @DisplayName("should update both name and password when both are provided")
         void shouldUpdateNameAndPasswordWhenProvided() {
-            UpdateUserRequest request = new UpdateUserRequest("Updated Name", "newPassword");
+            UpdateUserRequest request =
+                    new UpdateUserRequest("Updated Name", "newPassword");
+
             UserResponse response = mock(UserResponse.class);
 
-            when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-            when(passwordEncoder.encode("newPassword")).thenReturn("hashedNewPassword");
-            when(userRepository.save(user)).thenReturn(user);
-            when(userMapper.toResponse(user)).thenReturn(response);
+            when(passwordEncoder.encode("newPassword"))
+                    .thenReturn("hashedNewPassword");
 
-            UserResponse result = userService.update(1L, request);
+            when(userRepository.save(user))
+                    .thenReturn(user);
 
-            assertThat(result).isNotNull().isEqualTo(response);
+            when(userMapper.toResponse(user))
+                    .thenReturn(response);
+
+            UserResponse result = userService.update(user, request);
+
+            assertThat(result)
+                    .isNotNull()
+                    .isEqualTo(response);
+
             verify(user).updateName("Updated Name");
             verify(user).changePassword("hashedNewPassword");
             verify(userRepository).save(user);
             verify(userMapper).toResponse(user);
         }
 
-        @Test
-        @DisplayName("should update only name when password is blank or null")
-        void shouldUpdateOnlyNameWhenPasswordIsBlank() {
-            UpdateUserRequest request = new UpdateUserRequest("Only Name Updated", "   ");
-            UserResponse response = mock(UserResponse.class);
-
-            when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-            when(userRepository.save(user)).thenReturn(user);
-            when(userMapper.toResponse(user)).thenReturn(response);
-
-            UserResponse result = userService.update(1L, request);
-
-            assertThat(result).isNotNull().isEqualTo(response);
-            verify(user).updateName("Only Name Updated");
-            verify(user, never()).changePassword(anyString());
-            verify(passwordEncoder, never()).encode(anyString());
-            verify(userRepository).save(user);
-        }
-
-        @Test
-        @DisplayName("should throw EntityNotFoundException when updating non-existent user")
-        void shouldThrowEntityNotFoundExceptionWhenUpdatingNonExistentUser() {
-            UpdateUserRequest request = new UpdateUserRequest("Name", "password");
-
-            when(userRepository.findById(99L)).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> userService.update(99L, request))
-                    .isInstanceOf(EntityNotFoundException.class)
-                    .hasMessage("User not found");
-
-            verify(userRepository, never()).save(any());
-        }
-    }
-
     @Nested
     @DisplayName("delete")
     class Delete {
 
-        @Test
-        @DisplayName("should delete user when user exists")
-        void shouldDeleteUserWhenExists() {
-            when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+         @Test
+         @DisplayName("should delete authenticated user")
+         void shouldDeleteAuthenticatedUser() {
 
-            userService.delete(1L);
+             userService.delete(user);
 
-            verify(userRepository).findById(1L);
-            verify(userRepository).delete(user);
-        }
-
-        @Test
-        @DisplayName("should throw EntityNotFoundException when deleting non-existent user")
-        void shouldThrowEntityNotFoundExceptionWhenDeletingNonExistentUser() {
-            when(userRepository.findById(99L)).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> userService.delete(99L))
-                    .isInstanceOf(EntityNotFoundException.class)
-                    .hasMessage("User not found");
-
-            verify(userRepository, never()).delete(any());
+             verify(userRepository).delete(user);
+            }
         }
     }
 }

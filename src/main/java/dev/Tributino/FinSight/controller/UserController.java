@@ -47,7 +47,7 @@ public class UserController {
             @AuthenticationPrincipal User loggedUser
     ) {
         return ResponseEntity.ok(
-                userService.update(loggedUser.getId(), request)
+                userService.update(loggedUser, request)
         );
     }
 
@@ -55,7 +55,7 @@ public class UserController {
     public ResponseEntity<Void> delete(
             @AuthenticationPrincipal User loggedUser
     ) {
-        userService.delete(loggedUser.getId());
+        userService.delete(loggedUser);
 
         return ResponseEntity.noContent().build();
     }
