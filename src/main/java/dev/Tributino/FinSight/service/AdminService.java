@@ -1,3 +1,4 @@
+
 package dev.Tributino.FinSight.service;
 
 import dev.Tributino.FinSight.domain.User;
@@ -6,6 +7,7 @@ import dev.Tributino.FinSight.dto.user.UserRoleUpdateRequest;
 import dev.Tributino.FinSight.dto.user.UserStatusUpdateRequest;
 import dev.Tributino.FinSight.enums.Role;
 import dev.Tributino.FinSight.mapper.AdminMapper;
+import dev.Tributino.FinSight.repository.AdminOperationLockRepository;
 import dev.Tributino.FinSight.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
@@ -13,20 +15,25 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 @Service
 public class AdminService {
 
-    private static final long MIN_ACTIVE_ADMINS = 2;
+    private static final long MIN_ACTIVE_ADMINS = 2L;
+    private static final Long ADMIN_OPERATION_LOCK_ID = 1L;
 
     private final UserRepository userRepository;
     private final AdminMapper adminMapper;
+    private final AdminOperationLockRepository adminOperationLockRepository;
 
     public AdminService(
             UserRepository userRepository,
-            AdminMapper adminMapper
+            AdminMapper adminMapper,
+            AdminOperationLockRepository adminOperationLockRepository
     ) {
         this.userRepository = userRepository;
         this.adminMapper = adminMapper;
+        this.adminOperationLockRepository = adminOperationLockRepository;
     }
 
     @Transactional(readOnly = true)
@@ -51,19 +58,14 @@ public class AdminService {
         return adminMapper.toResponse(findEntityById(id));
     }
 
-    private User findEntityById(Long id) {
-        return userRepository.findById(id)
-                .orElseThrow(() ->
-                        new EntityNotFoundException("User not found with id: " + id)
-                );
-    }
-
     @Transactional
     public AdminUserResponse updateStatus(
             User loggedUser,
             Long id,
             UserStatusUpdateRequest request
     ) {
+        lockAdminOperations();
+
         User targetUser = findEntityById(id);
 
         validateNotSelf(loggedUser, targetUser);
@@ -80,14 +82,33 @@ public class AdminService {
             Long id,
             UserRoleUpdateRequest request
     ) {
+        lockAdminOperations();
+
         User targetUser = findEntityById(id);
 
         validateNotSelf(loggedUser, targetUser);
         validateRoleChange(targetUser, request);
 
-        applyChangeRole(targetUser, request.role());
+        applyRoleChange(targetUser, request.role());
 
         return adminMapper.toResponse(targetUser);
+    }
+
+    private User findEntityById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() ->
+                        new EntityNotFoundException(
+                                "User not found with id: " + id
+                        )
+                );
+    }
+
+    private void validateNotSelf(User loggedUser, User targetUser) {
+        if (loggedUser.getId().equals(targetUser.getId())) {
+            throw new IllegalArgumentException(
+                    "Administrators cannot modify their own account through this endpoint."
+            );
+        }
     }
 
     private void validateStatusChange(
@@ -111,8 +132,7 @@ public class AdminService {
             return;
         }
 
-        if (!targetUser.isEnabled()
-                && request.role() == Role.ADMIN) {
+        if (!targetUser.isEnabled() && request.role() == Role.ADMIN) {
             throw new IllegalArgumentException(
                     "A disabled user cannot be promoted to ADMIN."
             );
@@ -142,7 +162,8 @@ public class AdminService {
     }
 
     private void ensureMinimumActiveAdmins() {
-        long activeAdmins = userRepository.countByRoleAndEnabledTrue(Role.ADMIN);
+        long activeAdmins =
+                userRepository.countByRoleAndEnabledTrue(Role.ADMIN);
 
         if (activeAdmins <= MIN_ACTIVE_ADMINS) {
             throw new IllegalArgumentException(
@@ -167,26 +188,22 @@ public class AdminService {
         }
     }
 
-    private void applyChangeRole(
-            User targetUser,
-            Role role
-    ) {
-        if(targetUser.getRole().equals(role)){
+    private void applyRoleChange(User targetUser, Role role) {
+        if (targetUser.getRole() == role) {
             return;
         }
 
         targetUser.changeRole(role);
     }
 
-    private void validateNotSelf(
-            User loggedUser,
-            User targetUser
-    ) {
-        if (loggedUser.getId().equals(targetUser.getId())) {
-            throw new IllegalArgumentException(
-                    "Administrators cannot modify their own account through this endpoint."
-            );
-        }
+    private void lockAdminOperations() {
+        adminOperationLockRepository
+                .findByIdForUpdate(ADMIN_OPERATION_LOCK_ID)
+                .orElseThrow(() ->
+                        new IllegalStateException(
+                                "Admin operation lock row not found."
+                        )
+                );
     }
 
     private String normalizeFilter(String value) {

@@ -39,6 +39,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Page<User> findByEnabled(boolean enabled, Pageable pageable);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
     long countByRoleAndEnabledTrue(Role role);
 }
