@@ -44,11 +44,13 @@ public class TokenService {
 
             Algorithm algorithm = Algorithm.HMAC256(secret);
 
-            return JWT.require(algorithm)
+            String subject = JWT.require(algorithm)
                     .withIssuer("FinSight API")
                     .build()
                     .verify(token)
                     .getSubject();
+
+            return (subject == null || subject.isBlank()) ? "" : subject;
 
         } catch (JWTVerificationException exception) {
 
