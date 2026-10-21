@@ -62,10 +62,6 @@ class SecurityIntegrationTest {
     @Value("${api.security.token.secret}")
     private String secret;
 
-    /**
-     * Endpoints existem apenas nos testes. Assim validamos a camada de segurança
-     * sem depender de nenhum controller real da aplicação.
-     */
     @RestController
     static class SecurityProbeController {
 
@@ -80,11 +76,8 @@ class SecurityIntegrationTest {
         }
     }
 
-    // ---------------------------------------------------------------
-    // Cenário 1: usuário ativo + JWT válido
-    // ---------------------------------------------------------------
     @Test
-    @DisplayName("Usuário ativo com JWT válido acessa endpoint protegido")
+    @DisplayName("Active user with valid JWT accesses protected endpoint")
     void activeUserWithValidTokenCanAccessProtectedEndpoint() throws Exception {
         User user = saveUser(Role.USER, true);
 
@@ -92,11 +85,8 @@ class SecurityIntegrationTest {
                 .andExpect(status().isOk());
     }
 
-    // ---------------------------------------------------------------
-    // Cenário 2: usuário desativado + JWT ainda válido
-    // ---------------------------------------------------------------
     @Test
-    @DisplayName("Usuário desativado com JWT ainda válido recebe 401")
+    @DisplayName("A disabled user with a still valid JWT receives a 401 error.")
     void disabledUserWithValidTokenReceives401() throws Exception {
         User user = saveUser(Role.USER, false);
 
@@ -105,11 +95,8 @@ class SecurityIntegrationTest {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }
 
-    // ---------------------------------------------------------------
-    // Cenário 3: token expirado
-    // ---------------------------------------------------------------
     @Test
-    @DisplayName("Token expirado não autentica o usuário")
+    @DisplayName("Expired token does not authenticate the user")
     void expiredTokenDoesNotAuthenticate() throws Exception {
         User user = saveUser(Role.USER, true);
         String expired = buildToken(secret, user.getEmail(), Instant.now().minusSeconds(60));
@@ -118,18 +105,15 @@ class SecurityIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    // ---------------------------------------------------------------
-    // Cenário 4: token inválido (lixo, assinatura errada, sem token)
-    // ---------------------------------------------------------------
     @Test
-    @DisplayName("Token malformado não autentica o usuário")
+    @DisplayName("Malformed token fails to authenticate user")
     void malformedTokenDoesNotAuthenticate() throws Exception {
         mockMvc.perform(get(PROTECTED_URL).header("Authorization", bearer("isto.nao.e.um.jwt")))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    @DisplayName("Token assinado com outra chave não autentica o usuário")
+    @DisplayName("A token signed with a different key does not authenticate the user.")
     void tokenSignedWithAnotherSecretDoesNotAuthenticate() throws Exception {
         User user = saveUser(Role.USER, true);
         String forged = buildToken("outra-chave-qualquer", user.getEmail(), Instant.now().plusSeconds(3600));
@@ -139,18 +123,15 @@ class SecurityIntegrationTest {
     }
 
     @Test
-    @DisplayName("Requisição sem token recebe 401")
+    @DisplayName("Request without token receives 401")
     void requestWithoutTokenReceives401() throws Exception {
         mockMvc.perform(get(PROTECTED_URL))
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }
 
-    // ---------------------------------------------------------------
-    // Cenário 5: USER em rota administrativa
-    // ---------------------------------------------------------------
     @Test
-    @DisplayName("Usuário ativo com papel USER recebe 403 em /api/admin/**")
+    @DisplayName("Active user with USER role receives 403 error in /api/admin/**")
     void userRoleReceives403OnAdminEndpoint() throws Exception {
         User user = saveUser(Role.USER, true);
 
@@ -159,11 +140,8 @@ class SecurityIntegrationTest {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }
 
-    // ---------------------------------------------------------------
-    // Cenário 6: ADMIN em rota administrativa
-    // ---------------------------------------------------------------
     @Test
-    @DisplayName("Usuário ativo com papel ADMIN acessa /api/admin/**")
+    @DisplayName("Active user with ADMIN role accesses /api/admin/**")
     void adminRoleCanAccessAdminEndpoint() throws Exception {
         User admin = saveUser(Role.ADMIN, true);
 
@@ -171,9 +149,6 @@ class SecurityIntegrationTest {
                 .andExpect(status().isOk());
     }
 
-    // ---------------------------------------------------------------
-    // Helpers
-    // ---------------------------------------------------------------
     private User saveUser(Role role, boolean enabled) {
         String email = "user-" + UUID.randomUUID() + "@finsight.test";
 
