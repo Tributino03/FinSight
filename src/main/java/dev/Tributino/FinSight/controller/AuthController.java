@@ -1,51 +1,33 @@
 package dev.Tributino.FinSight.controller;
 
-import dev.Tributino.FinSight.domain.User;
 import dev.Tributino.FinSight.dto.user.LoginRequest;
 import dev.Tributino.FinSight.dto.user.TokenResponse;
-import dev.Tributino.FinSight.service.TokenService;
+import dev.Tributino.FinSight.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private final AuthenticationManager authenticationManager;
-    private final TokenService tokenService;
+    private final AuthService authService;
 
-    public AuthController(
-            AuthenticationManager authenticationManager,
-            TokenService tokenService
-    ) {
-        this.authenticationManager = authenticationManager;
-        this.tokenService = tokenService;
+    public AuthController(AuthService authService) {
+        this.authService = authService;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<TokenResponse> login(
-            @Valid @RequestBody LoginRequest request
-    ) {
+    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
+        String token = authService.login(request.email(), request.password());
+        return ResponseEntity.ok(new TokenResponse(token));
+    }
 
-        var usernamePassword =
-                new UsernamePasswordAuthenticationToken(
-                        request.email(),
-                        request.password()
-                );
-
-        Authentication authentication =
-                authenticationManager.authenticate(usernamePassword);
-
-        User user = (User) authentication.getPrincipal();
-
-        String token = tokenService.generateToken(user);
-
-        return ResponseEntity.ok(
-                new TokenResponse(token)
-        );
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader.startsWith("Bearer ")) {
+            authService.logout(authHeader.substring(7));
+        }
+        return ResponseEntity.noContent().build();
     }
 }

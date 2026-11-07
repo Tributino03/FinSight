@@ -1,7 +1,8 @@
 package dev.Tributino.FinSight.config;
 
-import dev.Tributino.FinSight.domain.User;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import dev.Tributino.FinSight.repository.UserRepository;
+import dev.Tributino.FinSight.service.TokenBlacklistService;
 import dev.Tributino.FinSight.service.TokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,13 +20,16 @@ import java.io.IOException;
 public class SecurityFilter extends OncePerRequestFilter {
 
     private final TokenService tokenService;
+    private final TokenBlacklistService blacklistService;
     private final UserRepository userRepository;
 
     public SecurityFilter(
             TokenService tokenService,
+            TokenBlacklistService blacklistService,
             UserRepository userRepository
     ) {
         this.tokenService = tokenService;
+        this.blacklistService = blacklistService;
         this.userRepository = userRepository;
     }
 
@@ -40,30 +44,27 @@ public class SecurityFilter extends OncePerRequestFilter {
 
         if (token != null) {
 
-            String email = tokenService.validateToken(token);
+            // 1) A pulseira é verdadeira e não venceu?
+            DecodedJWT jwt = tokenService.decodeToken(token);
 
-            if (!email.isEmpty()) {
+            // 2) O número dela está no caderninho de canceladas?
+            if (jwt != null && !blacklistService.isRevoked(jwt.getId())) {
 
-                userRepository.findByEmail(email)
-                        .filter(User::isEnabled)
-                        .ifPresent(user -> {
+                String email = jwt.getSubject();
 
-                            var authentication =
-                                    new UsernamePasswordAuthenticationToken(
-                                            user,
-                                            null,
-                                            user.getAuthorities()
-                                    );
-
-                            authentication.setDetails(
-                                    new WebAuthenticationDetailsSource()
-                                            .buildDetails(request)
-                            );
-
-                            SecurityContextHolder
-                                    .getContext()
-                                    .setAuthentication(authentication);
-                        });
+                if (email != null && !email.isBlank()) {
+                    userRepository.findByEmail(email)
+                            .filter(user -> user.isEnabled())
+                            .ifPresent(user -> {
+                                var authentication = new UsernamePasswordAuthenticationToken(
+                                        user, null, user.getAuthorities()
+                                );
+                                authentication.setDetails(
+                                        new WebAuthenticationDetailsSource().buildDetails(request)
+                                );
+                                SecurityContextHolder.getContext().setAuthentication(authentication);
+                            });
+                }
             }
         }
 
@@ -71,7 +72,6 @@ public class SecurityFilter extends OncePerRequestFilter {
     }
 
     private String recoverToken(HttpServletRequest request) {
-
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
