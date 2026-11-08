@@ -44,10 +44,8 @@ public class SecurityFilter extends OncePerRequestFilter {
 
         if (token != null) {
 
-            // 1) A pulseira é verdadeira e não venceu?
             DecodedJWT jwt = tokenService.decodeToken(token);
 
-            // 2) O número dela está no caderninho de canceladas?
             if (jwt != null && !blacklistService.isRevoked(jwt.getId())) {
 
                 String email = jwt.getSubject();

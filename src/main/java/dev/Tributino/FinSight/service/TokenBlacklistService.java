@@ -20,7 +20,6 @@ public class TokenBlacklistService {
     public void revoke(String jti, Instant expiresAt) {
         Duration ttl = Duration.between(Instant.now(), expiresAt);
 
-        // Se já venceu, não precisa anotar nada
         if (ttl.isNegative() || ttl.isZero()) {
             return;
         }
@@ -30,7 +29,7 @@ public class TokenBlacklistService {
 
     public boolean isRevoked(String jti) {
         if (jti == null) {
-            return false; // tokens antigos, emitidos antes do jti existir
+            return false;
         }
         return Boolean.TRUE.equals(redisTemplate.hasKey(PREFIX + jti));
     }

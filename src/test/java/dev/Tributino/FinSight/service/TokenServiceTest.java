@@ -6,6 +6,7 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import dev.Tributino.FinSight.domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -17,11 +18,12 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("TokenService unit tests")
+@DisplayName("TokenService Unit Tests")
 class TokenServiceTest {
 
     @InjectMocks
@@ -39,89 +41,95 @@ class TokenServiceTest {
         ReflectionTestUtils.setField(tokenService, "secret", secret);
     }
 
-    @Test
-    @DisplayName("Should successfully generate a JWT token when user is valid")
-    void shouldSuccessfullyGenerateTokenWhenUserIsValid() {
-        when(user.getEmail()).thenReturn(userEmail);
+    @Nested
+    @DisplayName("generateToken")
+    class GenerateToken {
 
-        String token = tokenService.generateToken(user);
+        @Test
+        @DisplayName("should successfully generate a JWT token when user is valid")
+        void shouldSuccessfullyGenerateTokenWhenUserIsValid() {
+            when(user.getEmail()).thenReturn(userEmail);
 
-        assertNotNull(token);
-        assertFalse(token.isEmpty());
+            String token = tokenService.generateToken(user);
 
-        DecodedJWT decodedJWT = tokenService.decodeToken(token);
-        assertNotNull(decodedJWT);
-        assertEquals(userEmail, decodedJWT.getSubject());
-        assertEquals(issuer, decodedJWT.getIssuer());
-        assertNotNull(decodedJWT.getId());
+            assertThat(token).isNotNull().isNotEmpty();
+
+            DecodedJWT decodedJWT = tokenService.decodeToken(token);
+            assertThat(decodedJWT).isNotNull();
+            assertThat(decodedJWT.getSubject()).isEqualTo(userEmail);
+            assertThat(decodedJWT.getIssuer()).isEqualTo(issuer);
+            assertThat(decodedJWT.getId()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should throw Exception when JWT token generation fails due to missing secret")
+        void shouldThrowExceptionWhenTokenGenerationFails() {
+            ReflectionTestUtils.setField(tokenService, "secret", (String) null);
+
+            assertThatThrownBy(() -> tokenService.generateToken(user))
+                    .isInstanceOf(Exception.class);
+        }
     }
 
-    @Test
-    @DisplayName("Should throw RuntimeException when JWT token generation fails due to creation exception")
-    void shouldThrowRuntimeExceptionWhenTokenGenerationFails() {
-        ReflectionTestUtils.setField(tokenService, "secret", (String) null);
+    @Nested
+    @DisplayName("decodeToken")
+    class DecodeToken {
 
-        Exception exception = assertThrows(Exception.class, () -> {
-            tokenService.generateToken(user);
-        });
+        @Test
+        @DisplayName("should successfully decode a valid JWT token and return DecodedJWT")
+        void shouldSuccessfullyDecodeValidToken() {
+            when(user.getEmail()).thenReturn(userEmail);
+            String token = tokenService.generateToken(user);
 
-        assertNotNull(exception.getMessage());
-    }
+            DecodedJWT decodedJWT = tokenService.decodeToken(token);
 
-    @Test
-    @DisplayName("Should successfully decode a valid JWT token and return DecodedJWT")
-    void shouldSuccessfullyDecodeValidToken() {
-        when(user.getEmail()).thenReturn(userEmail);
-        String token = tokenService.generateToken(user);
+            assertThat(decodedJWT).isNotNull();
+            assertThat(decodedJWT.getSubject()).isEqualTo(userEmail);
+            assertThat(decodedJWT.getIssuer()).isEqualTo(issuer);
+        }
 
-        DecodedJWT decodedJWT = tokenService.decodeToken(token);
+        @Test
+        @DisplayName("should return null when JWT token is invalid or verification fails")
+        void shouldReturnNullWhenTokenIsInvalid() {
+            String invalidToken = "invalid.jwt.token";
 
-        assertNotNull(decodedJWT);
-        assertEquals(userEmail, decodedJWT.getSubject());
-        assertEquals(issuer, decodedJWT.getIssuer());
-    }
+            DecodedJWT decodedJWT = tokenService.decodeToken(invalidToken);
 
-    @Test
-    @DisplayName("Should return null when JWT token is invalid or verification fails")
-    void shouldReturnNullWhenTokenIsInvalid() {
-        String invalidToken = "invalid.jwt.token";
+            assertThat(decodedJWT).isNull();
+        }
 
-        DecodedJWT decodedJWT = tokenService.decodeToken(invalidToken);
+        @Test
+        @DisplayName("should return null when JWT token is expired")
+        void shouldReturnNullWhenTokenIsExpired() {
+            Algorithm algorithm = Algorithm.HMAC256(secret);
 
-        assertNull(decodedJWT);
-    }
+            String expiredToken = JWT.create()
+                    .withIssuer(issuer)
+                    .withSubject(userEmail)
+                    .withJWTId(UUID.randomUUID().toString())
+                    .withExpiresAt(Instant.now().minus(1, ChronoUnit.HOURS))
+                    .sign(algorithm);
 
-    @Test
-    @DisplayName("Should return null when JWT token is expired")
-    void shouldReturnNullWhenTokenIsExpired() {
-        Algorithm algorithm = Algorithm.HMAC256(secret);
+            DecodedJWT decodedJWT = tokenService.decodeToken(expiredToken);
 
-        String expiredToken = JWT.create()
-                .withIssuer(issuer)
-                .withSubject(userEmail)
-                .withJWTId(UUID.randomUUID().toString())
-                .withExpiresAt(Instant.now().minus(1, ChronoUnit.HOURS))
-                .sign(algorithm);
+            assertThat(decodedJWT).isNull();
+        }
 
-        DecodedJWT decodedJWT = tokenService.decodeToken(expiredToken);
+        @Test
+        @DisplayName("should return null when JWT token has a different issuer")
+        void shouldReturnNullWhenTokenHasDifferentIssuer() {
+            Algorithm algorithm = Algorithm.HMAC256(secret);
 
-        assertNull(decodedJWT);
-    }
+            String tokenWithDifferentIssuer = JWT.create()
+                    .withIssuer("Other API")
+                    .withSubject(userEmail)
+                    .withJWTId(UUID.randomUUID().toString())
+                    .withExpiresAt(Instant.now().plus(2, ChronoUnit.HOURS))
+                    .sign(algorithm);
 
-    @Test
-    @DisplayName("Should return null when JWT token has a different issuer")
-    void shouldReturnNullWhenTokenHasDifferentIssuer() {
-        Algorithm algorithm = Algorithm.HMAC256(secret);
+            DecodedJWT decodedJWT = tokenService.decodeToken(tokenWithDifferentIssuer);
 
-        String tokenWithDifferentIssuer = JWT.create()
-                .withIssuer("Other API")
-                .withSubject(userEmail)
-                .withJWTId(UUID.randomUUID().toString())
-                .withExpiresAt(Instant.now().plus(2, ChronoUnit.HOURS))
-                .sign(algorithm);
-
-        DecodedJWT decodedJWT = tokenService.decodeToken(tokenWithDifferentIssuer);
-
-        assertNull(decodedJWT);
+            assertThat(decodedJWT).isNull();
+        }
     }
 }
