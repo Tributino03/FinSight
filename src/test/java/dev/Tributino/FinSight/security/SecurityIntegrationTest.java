@@ -2,6 +2,7 @@ package dev.Tributino.FinSight.security;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import dev.Tributino.FinSight.config.TestcontainersConfig;
 import dev.Tributino.FinSight.domain.User;
 import dev.Tributino.FinSight.enums.Role;
 import dev.Tributino.FinSight.repository.UserRepository;
@@ -35,9 +36,8 @@ import org.springframework.context.annotation.Import;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Testcontainers
 @Transactional
-@Import(SecurityIntegrationTest.SecurityProbeController.class)
+@Import({TestcontainersConfig.class, SecurityIntegrationTest.SecurityProbeController.class})
 class SecurityIntegrationTest {
 
     private static final String PROTECTED_URL = "/api/security-probe";
