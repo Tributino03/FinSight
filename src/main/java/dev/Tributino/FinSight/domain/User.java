@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 
 @Entity
 @Table(name = "users")
@@ -48,7 +49,7 @@ public class User implements UserDetails {
         validatePassword(password);
 
         this.name = name;
-        this.email = email;
+        this.email = normalizeEmail(email);
         this.password = password;
         this.role = Role.USER;
         this.enabled = true;
@@ -81,6 +82,10 @@ public class User implements UserDetails {
         if (email == null || email.isBlank()) {
             throw new IllegalArgumentException("User email is required.");
         }
+    }
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 
     private void validatePassword(String password) {

@@ -11,6 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Locale;
+
 @Service
 public class UserService {
 
@@ -45,12 +47,13 @@ public class UserService {
 
     @Transactional
     public UserResponse create(RegisterRequest request) {
+        String normalizedEmail = normalizeEmail(request.email());
 
-        validateEmailAvailability(request.email());
+        validateEmailAvailability(normalizedEmail);
 
         User newUser = new User(
                 request.name(),
-                request.email(),
+                normalizedEmail,
                 passwordEncoder.encode(request.password())
         );
 
@@ -81,12 +84,15 @@ public class UserService {
         userRepository.delete(loggedUser);
     }
 
-    private void validateEmailAvailability(String email) {
-
-        if (userRepository.existsByEmail(email)) {
+    private void validateEmailAvailability(String normalizedEmail) {
+        if (normalizedEmail != null && userRepository.existsByEmail(normalizedEmail)) {
             throw new IllegalArgumentException(
                     "This email is already registered."
             );
         }
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
     }
 }

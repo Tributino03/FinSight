@@ -7,6 +7,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
+import java.util.Locale;
+
 @Service
 public class AuthService {
 
@@ -25,10 +27,10 @@ public class AuthService {
     }
 
     public String login(String email, String password) {
-        var credentials = new UsernamePasswordAuthenticationToken(email, password);
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+        var credentials = new UsernamePasswordAuthenticationToken(normalizedEmail, password);
 
         Authentication authentication = authenticationManager.authenticate(credentials);
-
         User user = (User) authentication.getPrincipal();
 
         return tokenService.generateToken(user);
